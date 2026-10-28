@@ -1,0 +1,55 @@
+// Puzzle check: validates every precomputed incident in puzzles.js against
+// the game's own rules from index.html (everything above the rendering
+// section): the faults explain the alerts, no fault is certain from the first
+// alerts, the par strategy reads logs at least twice, fixes every fault, and
+// costs exactly the stored par, played
+// through the same action code the page uses. Regenerate with scripts/build-puzzles.mjs.
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const script = html.split('<script>')[1].split('// ---------- rendering')[0];
+const store = readFileSync(new URL('../puzzles.js', import.meta.url), 'utf8');
+const ctx = {};
+vm.createContext(ctx);
+vm.runInContext(store + script + '\nthis.api = { PUZZLES, decode, hypotheses, popcount, outcome, newPlay, play, ROLES };', ctx);
+const { PUZZLES, decode, hypotheses, popcount, outcome, newPlay, play, ROLES } = ctx.api;
+
+const failures = [];
+let n = 0;
+for (const kind of ['daily', 'practice']) {
+  PUZZLES[kind].forEach((rec, i) => {
+    n++;
+    const id = `${kind} ${i}`;
+    const { k, G, mon, truth, par, parSteps: acts } = decode(rec);
+    // Every edge must be one the role catalogue allows.
+    G.arch.forEach(([svc, deps]) => deps.forEach(d => { if (!ROLES[svc][1].includes(d)) failures.push(`${id}: ${svc} may not depend on ${d}`); }));
+    if (G.N > 12) failures.push(`${id}: ${G.N} services, solver limit is 12`);
+    if (popcount(truth) !== k) failures.push(`${id}: root count does not match the faults`);
+    const B = hypotheses(G, mon, G.UNHEALTHY[truth] & mon);
+    if (!B.includes(truth)) failures.push(`${id}: faults do not explain the alerts`);
+    if (B.reduce((x, h) => x & h, -1) !== 0) failures.push(`${id}: a fault is certain from the first alerts`);
+    if (acts.filter(a => a.k === 'check').length < 2) failures.push(`${id}: par needs fewer than two checks`);
+    // Play par through the page's own action code, and check every log read
+    // against the solver's model of what a check reveals.
+    const st = newPlay(truth);
+    let F = 0;
+    for (const a of acts) {
+      const expect = outcome(G, truth, F, a, mon).split(':')[0];
+      const got = play(G, st, a);
+      if (got !== expect) failures.push(`${id}: ${a.k} ${a.s} showed ${got}, solver expected ${expect}`);
+      if (a.k === 'fix') F |= 1 << a.s;
+    }
+    if (st.h !== 0) failures.push(`${id}: par strategy leaves faults unfixed`);
+    if (st.down !== par) failures.push(`${id}: par strategy costs ${st.down}, stored ${par}`);
+  });
+}
+const archs = new Set([...PUZZLES.daily, ...PUZZLES.practice].map(r => r[1]));
+console.log(`${n} incidents checked, ${archs.size} distinct architectures, ${PUZZLES.daily.length} daily from ${PUZZLES.epoch}`);
+// The scheduled workflow keeps the daily list well ahead; fail loudly if it stopped.
+const lastDay = new Date(Date.parse(PUZZLES.epoch + 'T00:00:00Z') + (PUZZLES.daily.length - 1) * 864e5);
+const daysLeft = Math.floor((lastDay - Date.now()) / 864e5);
+console.log(`daily incidents run to ${lastDay.toISOString().slice(0, 10)}, ${daysLeft} days ahead`);
+if (daysLeft < 14) failures.push(`daily incidents run out in ${daysLeft} days; run scripts/build-puzzles.mjs extend`);
+if (failures.length) { failures.slice(0, 20).forEach(f => console.error(f)); process.exit(1); }
+console.log('ok');
