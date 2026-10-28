@@ -112,7 +112,7 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
   <div class="stats">
     <div class="stat"><b id="s-clock">T+0m</b><small>Clock</small></div>
     <div class="stat"><b id="s-down">0</b><small>User-min</small></div>
-    <div class="stat"><b id="s-roots">0/2</b><small>Fixed</small></div>
+    <div class="stat"><b id="s-roots">0</b><small>Fixed</small></div>
     <div class="stat"><b id="s-par">–</b><small>Par</small></div>
   </div>
 
@@ -139,8 +139,6 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
   <ol class="log" id="log"></ol>
 
   <div class="ctl" id="practice-ctl" hidden>
-    <label for="k">Root causes</label>
-    <select id="k"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
     <button class="btn" id="new">New incident</button>
   </div>
 
@@ -149,15 +147,16 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
     <ul>
       <li>Arrows point from a service to what it depends on. A service fails if it has a fault, or if anything it depends on is failing.</li>
       <li>Monitored services alert when they fail. Grey ones have no monitoring, so you can't see their state.</li>
-      <li>You know how many root causes there are. Tap a service to act on it.</li>
+      <li>There are one, two or three root causes, and you aren't told how many. Tap a service to act on it.</li>
       <li>Check logs takes 2 minutes and tells you whether the service has its own errors, is failing because of a dependency, or is clean.</li>
       <li>Fix takes 5 minutes (postgres failover takes 8) and repairs the service if it has a fault. Otherwise the time is lost.</li>
       <li>Every minute, each failing user-facing service (web, api, checkout) adds a user-minute of downtime. Only actions move the clock, so take as long as you like to think.</li>
-      <li>Par is what the best possible strategy scores on this incident, playing without knowing the answer. A lucky guess can beat it.</li>
+      <li>Par is what the best possible strategy scores on this incident, playing without knowing the answer and treating one, two and three root causes as equally likely. A lucky guess can beat it.</li>
     </ul>
   </details>
 </div>
 
+<script src="puzzles.js"></script>
 <script>
 // Root Cause, turn-based. A hidden set of k faulty services; you see alerts from
 // monitored services only. Every action costs incident minutes, and the score is
@@ -198,29 +197,40 @@ const popcount = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
 const usersDown = h => popcount(UNHEALTHY[h] & USER_MASK);
 const duration = a => a.k === 'check' ? CHECK_MIN : FIX_MIN(a.s);
 const afterAct = (h, a) => a.k === 'fix' ? h & ~(1 << a.s) : h;
-// What the player observes. A check reads the service's own logs: it is
-// failing itself, failing because of a dependency, or clean. A fix reports
-// whether there was anything to fix, and the monitored alerts then update.
-function outcome(h, a, mon) {
-  if (a.k === 'check') return (h >> a.s & 1) ? 'own' : (UNHEALTHY[h] >> a.s & 1) ? 'upstream' : 'clean';
-  return ((h >> a.s & 1) ? 'fixed' : 'nothing') + ':' + (UNHEALTHY[afterAct(h, a)] & mon);
+// The player does not know how many root causes there are: any set of one to
+// three faulty services that explains the alerts is a hypothesis. Prior: each
+// size is equally likely overall, so a single fault outweighs any one pair.
+const MAX_ROOTS = 3;
+const CHOOSE = n => k => { let r = 1; for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1); return r; };
+const WEIGHT = [0, 1, 2, 3].map(k => k ? 1 / CHOOSE(N)(k) : 0);
+const weight = h => WEIGHT[popcount(h)];
+
+// What the player observes, given the hypothesis h and the services already
+// fixed (F). A check reads the service's own logs: failing itself, failing
+// because of a dependency, or clean. A fix reports whether there was anything
+// to fix, and the monitored alerts then update.
+function outcome(h, F, a, mon) {
+  const rem = h & ~F;
+  if (a.k === 'check') return (rem >> a.s & 1) ? 'own' : (UNHEALTHY[rem] >> a.s & 1) ? 'upstream' : 'clean';
+  return ((rem >> a.s & 1) ? 'fixed' : 'nothing') + ':' + (UNHEALTHY[rem & ~(1 << a.s)] & mon);
 }
 
-function hypotheses(k, mon, alerts) {
+function hypotheses(mon, alerts) {
   const out = [];
-  for (let m = 0; m < 1 << N; m++) if (popcount(m) === k && (UNHEALTHY[m] & mon) === alerts) out.push(m);
+  for (let m = 1; m < 1 << N; m++) { const c = popcount(m); if (c <= MAX_ROOTS && (UNHEALTHY[m] & mon) === alerts) out.push(m); }
   return out;
 }
 
 function makeSolver(mon) {
   const memo = new Map();
-  function best(B) {
-    if (B.every(h => h === 0)) return { v: 0, a: null };
-    const key = B.join(',');
+  function best(B, F) {
+    if (B.every(h => (h & ~F) === 0)) return { v: 0, a: null };
+    const key = F + '|' + B.join(',');
     const hit = memo.get(key);
     if (hit) return hit;
     let res = { v: Infinity, a: null };
-    const union = B.reduce((x, h) => x | h, 0);
+    const WB = B.reduce((x, h) => x + weight(h), 0);
+    const union = B.reduce((x, h) => x | (h & ~F), 0);
     const acts = [];
     for (let s = 0; s < N; s++) {
       if (union >> s & 1) acts.push({ k: 'fix', s });
@@ -228,16 +238,17 @@ function makeSolver(mon) {
     }
     for (const a of acts) {
       const groups = new Map();
-      for (const h of B) { const o = outcome(h, a, mon); if (!groups.has(o)) groups.set(o, []); groups.get(o).push(h); }
+      for (const h of B) { const o = outcome(h, F, a, mon); if (!groups.has(o)) groups.set(o, []); groups.get(o).push(h); }
       if (a.k === 'check' && groups.size < 2) continue;
-      const d = duration(a);
+      const d = duration(a), F2 = a.k === 'fix' ? F | 1 << a.s : F;
       let total = 0;
       for (const G of groups.values()) {
-        for (const h of G) total += d * usersDown(h);
-        total += G.length * best(G.map(h => afterAct(h, a))).v;
-        if (total / B.length >= res.v) break;
+        let wg = 0;
+        for (const h of G) { const w = weight(h); wg += w; total += w * d * usersDown(h & ~F); }
+        total += wg * best(G, F2).v;
+        if (total / WB >= res.v) break;
       }
-      const v = total / B.length;
+      const v = total / WB;
       if (v < res.v - 1e-9) res = { v, a };
     }
     memo.set(key, res);
@@ -248,13 +259,14 @@ function makeSolver(mon) {
 
 // Play the optimal policy against the true fault set.
 function parRun(truth, B, mon, best) {
-  let h = truth, cost = 0, steps = [];
-  while (h) {
-    const a = best(B).a;
-    cost += duration(a) * usersDown(h);
-    const o = outcome(h, a, mon);
-    B = B.filter(x => outcome(x, a, mon) === o).map(x => afterAct(x, a));
-    h = afterAct(h, a);
+  let F = 0, cost = 0;
+  const steps = [];
+  while (truth & ~F) {
+    const a = best(B, F).a;
+    cost += duration(a) * usersDown(truth & ~F);
+    const o = outcome(truth, F, a, mon);
+    B = B.filter(x => outcome(x, F, a, mon) === o);
+    if (a.k === 'fix') F |= 1 << a.s;
     steps.push(a);
   }
   return { cost, steps };
@@ -267,12 +279,13 @@ function rngFrom(str) {
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
 
+// Incidents are kept only if they need reasoning: no fault is certain from the
+// first alerts, and the optimal strategy reads logs at least twice.
 function generate(seed, k) {
   const rng = rngFrom(seed);
-  for (let attempt = 0; attempt < 400; attempt++) {
+  for (let attempt = 0; attempt < 600; attempt++) {
     let mon = USER_MASK;
-    const others = NODES.filter(n => !n.user).map(n => n.i);
-    others.forEach(s => { if (rng() < 0.5) mon |= 1 << s; });
+    NODES.filter(n => !n.user).forEach(n => { if (rng() < 0.5) mon |= 1 << n.i; });
     const unmon = N - popcount(mon);
     if (unmon < 3 || unmon > 6) continue;
     let truth = 0;
@@ -282,12 +295,12 @@ function generate(seed, k) {
       truth |= 1 << s;
     }
     const alerts = UNHEALTHY[truth] & mon;
-    const B0 = hypotheses(k, mon, alerts);
-    if (B0.length < (k === 1 ? 2 : 3) || B0.length > 40) continue;
+    const B0 = hypotheses(mon, alerts);
+    if (B0.length < 4 || B0.length > 40 || B0.reduce((x, h) => x & h, -1) !== 0) continue;
     const best = makeSolver(mon);
     const par = parRun(truth, B0, mon, best);
-    if (k > 1 && !par.steps.some(a => a.k === 'check')) continue;
-    return { seed, k, mon, truth, alerts, suspects: B0.length, par: par.cost, parSteps: par.steps, expected: best(B0).v };
+    if (par.steps.filter(a => a.k === 'check').length < 2) continue;
+    return { seed, k, mon, truth, alerts, suspects: B0.length, par: par.cost, parSteps: par.steps, attempts: attempt + 1 };
   }
   throw new Error('no puzzle for ' + seed);
 }
@@ -301,8 +314,6 @@ const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag)
 const today = new Date();
 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 28)) / 864e5) + 1;
-// Weekends get three root causes: more time to think.
-const dailyK = [0, 6].includes(today.getDay()) ? 3 : 2;
 const SAVE_KEY = 'rootcause2-' + dateKey;
 const CHIP = { own: 'own errors', upstream: 'upstream', clean: 'clean', fixed: 'fixed', nothing: 'nothing to fix' };
 
@@ -359,11 +370,11 @@ function render() {
     e.chip.textContent = k ? CHIP[k] : '';
     e.chip.setAttribute('class', 'chip ' + (k || ''));
   });
-  $('eyebrow').textContent = mode === 'daily' ? `daily incident #${dailyNo} · ${P.k} root causes` : `practice incident · ${P.k} root cause${P.k > 1 ? 's' : ''}`;
+  $('eyebrow').textContent = mode === 'daily' ? `daily incident #${dailyNo} · 1 to 3 root causes` : 'practice incident · 1 to 3 root causes';
   $('s-clock').textContent = `T+${S.clock}m`;
   $('s-down').textContent = S.down;
   $('s-down').classList.toggle('warn', S.down > P.par);
-  $('s-roots').textContent = `${S.fixed}/${P.k}`;
+  $('s-roots').textContent = S.fixed;
   $('s-par').textContent = P.par;
   renderPanel(done);
   $('log').innerHTML = '';
@@ -426,14 +437,14 @@ function verdict(d) {
 
 function shareText() {
   const d = S.down - P.par;
-  const head = mode === 'daily' ? `Root Cause #${dailyNo}` : `Root Cause practice · ${P.k} roots`;
+  const head = mode === 'daily' ? `Root Cause #${dailyNo}` : 'Root Cause practice';
   return `${head} · ${S.down} user-min · par ${P.par} (${d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d)})\n${S.checks} check${S.checks === 1 ? '' : 's'} · ${S.fixed + S.wasted} fix${S.fixed + S.wasted === 1 ? '' : 'es'} · ${S.wasted} wasted`;
 }
 
 function showResult() {
   $('r-title').textContent = verdict(S.down - P.par);
   const roots = NODES.filter(n => P.truth >> n.i & 1).map(n => n.id).join(' and ');
-  $('r-par').textContent = `Root causes: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : 'fix'} ${NODES[a.s].id}`).join(' → ')}.`;
+  $('r-par').textContent = `${P.k} root cause${P.k > 1 ? 's' : ''}: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : 'fix'} ${NODES[a.s].id}`).join(' → ')}.`;
   $('r-share').value = shareText();
   $('again').hidden = false;
   $('result').hidden = false;
@@ -444,12 +455,15 @@ function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S.actions)); } catch (e) {}
 }
 
+// Incidents are precomputed by scripts/build-puzzles.mjs; the solver is too slow for page load.
+const fromStore = ([k, mon, truth, par, steps]) => ({ k, mon, truth, par, parSteps: steps.split(' ').map(x => ({ k: x[0] === 'c' ? 'check' : 'fix', s: +x.slice(1) })) });
+
 function start(m) {
   mode = m;
   $('tab-daily').setAttribute('aria-pressed', m === 'daily');
   $('tab-practice').setAttribute('aria-pressed', m === 'practice');
   $('practice-ctl').hidden = m !== 'practice';
-  P = m === 'daily' ? generate('rootcause-daily-' + dateKey, dailyK) : generate('rootcause-' + Math.random(), +$('k').value);
+  P = m === 'daily' ? fromStore(PUZZLES.daily[(dailyNo - 1 + PUZZLES.daily.length) % PUZZLES.daily.length]) : fromStore(PUZZLES.practice[Math.floor(Math.random() * PUZZLES.practice.length)]);
   S = newState();
   sel = null;
   if (m === 'daily') {
@@ -461,7 +475,6 @@ function start(m) {
 $('tab-daily').onclick = () => start('daily');
 $('tab-practice').onclick = () => start('practice');
 $('new').onclick = () => start('practice');
-$('k').onchange = () => start('practice');
 $('again').onclick = () => start('practice');
 $('copy').onclick = e => {
   const ta = $('r-share'), btn = e.currentTarget;
