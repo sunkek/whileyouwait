@@ -1,0 +1,458 @@
+<title>Hexroute</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow column; the board is the page, stats above, controls below. Placeholder tokens until the user's design system lands. */
+:root {
+  --bg: #e6e9ef; --tile: #f8f9fb; --empty: #dde1e8; --grid: #c9ceda;
+  --fg: #1b1f2c; --muted: #5b6275; --wire: #b4bac8; --line: #cfd4de;
+  --sig-1: #e0364a; --sig-2: #1c9f5c; --sig-4: #2f6be0;
+  --sig-3: #d29a00; --sig-5: #bd34d2; --sig-6: #0b9ea8;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11131a; --tile: #1b1e28; --empty: #161921; --grid: #2a2e3b;
+  --fg: #e7e9f0; --muted: #8b91a4; --wire: #3d4253; --line: #2a2e3b;
+  --sig-1: #ff5468; --sig-2: #3ddc84; --sig-4: #5b93ff;
+  --sig-3: #ffd23f; --sig-5: #ea6bff; --sig-6: #3fe3e3; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11131a; --tile: #1b1e28; --empty: #161921; --grid: #2a2e3b;
+  --fg: #e7e9f0; --muted: #8b91a4; --wire: #3d4253; --line: #2a2e3b;
+  --sig-1: #ff5468; --sig-2: #3ddc84; --sig-4: #5b93ff;
+  --sig-3: #ffd23f; --sig-5: #ea6bff; --sig-6: #3fe3e3; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); }
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 2rem; letter-spacing: -0.02em; margin: 0; }
+h1 span { color: var(--muted); font-weight: 500; font-size: 1rem; letter-spacing: 0; margin-left: 6px; }
+.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: 8px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 0.85rem var(--font-body); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat b { font: 600 1.35rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.stat small { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+svg#board { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+.cell-bg { fill: var(--tile); stroke: var(--grid); stroke-width: 2; }
+.cell-empty { fill: var(--empty); stroke: var(--grid); stroke-width: 2; }
+.tile { cursor: pointer; outline: none; }
+.tile:focus-visible .cell-bg { stroke: var(--fg); stroke-width: 4; }
+.wire { fill: none; stroke-width: 11; stroke-linecap: round; }
+.halo { fill: none; stroke: var(--tile); stroke-width: 21; stroke-linecap: butt; }
+.solved .cell-bg { transition: fill .4s; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--tile); color: var(--fg); font: 600 0.9rem var(--font-body); padding: 9px 14px; border-radius: 8px; cursor: pointer; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn:focus-visible, select:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+select { font: 600 0.9rem var(--font-body); padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--tile); color: var(--fg); }
+.result { border: 1px solid var(--line); background: var(--tile); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.result h2 { font-family: var(--font-display); margin: 0; font-size: 1.3rem; text-wrap: balance; }
+.result textarea { font: 0.9rem var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
+.rules { color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+.rules summary { cursor: pointer; color: var(--fg); font-weight: 600; }
+.rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }
+.hint { color: var(--muted); font-size: 0.85rem; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Hexroute<span id="sub"></span></h1>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-moves">0</b><small>Moves</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Par</small></div>
+    <div class="stat"><b id="s-lit">0/0</b><small>Receivers</small></div>
+    <div class="stat"><b id="s-open">0</b><small>Loose ends</small></div>
+  </div>
+
+  <svg id="board" role="application" aria-label="Puzzle board"></svg>
+
+  <div class="controls">
+    <button class="btn" id="reset">Reset board</button>
+    <select id="size" hidden aria-label="Board size">
+      <option value="small">Small</option>
+      <option value="medium" selected>Medium</option>
+      <option value="large">Large</option>
+    </select>
+    <button class="btn" id="new" hidden>New puzzle</button>
+    <span class="hint" id="reset-hint">Reset restores the board. Moves still count.</span>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="2" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next puzzle</button>
+    </div>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Tap a tile to turn it clockwise.</li>
+      <li>Hexagons are sources of red, green or blue light. Rings are receivers; the dots inside show which colours they need.</li>
+      <li>Everything joined in one network shares its light: red and blue together make magenta, red and green make yellow, green and blue make cyan.</li>
+      <li>Bridged lines cross without mixing. Keep networks apart where a receiver needs a pure colour.</li>
+      <li>The puzzle is solved when every receiver shows its exact colour and no line ends loose.</li>
+      <li>Par is the move count of the generator's own solution. Your score is moves over par.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+const S = 50, AP = S * Math.sqrt(3) / 2;
+// Flat-top hex, edges clockwise from the top.
+const DIRS = [[0,-1],[1,-1],[1,0],[0,1],[-1,1],[-1,0]];
+const MID = DIRS.map((_, k) => { const a = (-90 + 60 * k) * Math.PI / 180; return [AP * Math.cos(a), AP * Math.sin(a)]; });
+const HEX = (s) => [0,1,2,3,4,5].map(k => { const a = k * Math.PI / 3; return (s * Math.cos(a)).toFixed(2) + ',' + (s * Math.sin(a)).toFixed(2); }).join(' ');
+const PIP = { 1: [0, -0.17], 2: [-0.15, 0.09], 4: [0.15, 0.09] };
+const LEVELS = {
+  small:  { R: 2, nets: ['mix', 'mono'], cover: 0.6, wander: 4 },
+  medium: { R: 3, nets: ['mix', 'mix', 'fork'], cover: 0.5, wander: 6 },
+  large:  { R: 4, nets: ['mix', 'mix', 'fork', 'mono'], cover: 0.45, wander: 6 },
+};
+const NS = 'http://www.w3.org/2000/svg';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function seedFrom(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909);
+  let a = (h ^ h >>> 16) >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+function buildGrid(R) {
+  const cells = [], idx = new Map();
+  for (let q = -R; q <= R; q++)
+    for (let r = Math.max(-R, -q - R); r <= Math.min(R, -q + R); r++) { idx.set(q + ',' + r, cells.length); cells.push({ q, r }); }
+  const nb = cells.map(c => DIRS.map(([dq, dr]) => idx.has((c.q + dq) + ',' + (c.r + dr)) ? idx.get((c.q + dq) + ',' + (c.r + dr)) : -1));
+  return { cells, nb };
+}
+const hexDist = (a, b) => (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q + a.r - b.q - b.r)) / 2;
+
+function passable(c, ein, eout, net) {
+  if (c.kind) return false;
+  if (!c.groups.length) return true;
+  if (c.groups.length !== 1) return false;
+  const g = c.groups[0];
+  return g.net !== net && g.edges.length === 2 && !g.edges.includes(ein) && !g.edges.includes(eout);
+}
+const attachable = (c, net, ein) => !c.kind && c.groups.length === 1 && c.groups[0].net === net && !c.groups[0].edges.includes(ein);
+
+// Dijkstra over (cell, entry edge) states with random cell weights, so routes wander.
+function route(cells, nb, start, isTarget, net, w) {
+  const M = cells.length * 7;
+  const dist = new Float64Array(M).fill(Infinity), prev = new Int32Array(M).fill(-1), done = new Uint8Array(M);
+  dist[start * 7] = 0;
+  let end = -1, endPrev = -1, endEdge = -1, bestEnd = Infinity;
+  for (;;) {
+    let u = -1, bd = Infinity;
+    for (let i = 0; i < M; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; }
+    if (u < 0 || bd >= bestEnd) break;
+    done[u] = 1;
+    const x = Math.floor(u / 7), ein = u % 7 - 1;
+    if (x === start && ein >= 0) continue;
+    for (let e = 0; e < 6; e++) {
+      if (e === ein) continue;
+      const y = nb[x][e];
+      if (y < 0 || y === start) continue;
+      if (x !== start && !passable(cells[x], ein, e, net)) continue;
+      const yin = (e + 3) % 6;
+      if (isTarget(y, yin)) { if (bd < bestEnd) { bestEnd = bd; end = y; endPrev = u; endEdge = yin; } continue; }
+      const v = y * 7 + yin + 1, nd = bd + w[y];
+      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+    }
+  }
+  if (end < 0) return null;
+  const steps = [{ cell: end, ein: endEdge, eout: -1 }];
+  let u = endPrev, out = (endEdge + 3) % 6;
+  while (u >= 0) {
+    const x = Math.floor(u / 7), ein = u % 7 - 1;
+    steps.push({ cell: x, ein, eout: out });
+    out = ein >= 0 ? (ein + 3) % 6 : -1;
+    u = prev[u];
+  }
+  steps.reverse();
+  const seen = new Set();
+  for (const s of steps) { if (seen.has(s.cell)) return null; seen.add(s.cell); }
+  return steps;
+}
+
+function applyPath(cells, steps, net, first, last) {
+  steps.forEach((s, i) => {
+    const c = cells[s.cell];
+    if (i === 0) { c.kind = first.kind; c.color = first.color; c.groups = [{ net, edges: [s.eout] }]; }
+    else if (i === steps.length - 1) {
+      if (last) { c.kind = last.kind; c.color = last.color; c.groups = [{ net, edges: [s.ein] }]; }
+      else c.groups[0].edges.push(s.ein);
+    } else c.groups.push({ net, edges: [s.ein, s.eout] });
+  });
+}
+
+const canon = (groups, r) => groups.map(g => g.edges.map(e => (e + r) % 6).sort().join('')).sort().join('|');
+function period(groups) { const c0 = canon(groups, 0); for (const p of [1, 2, 3]) if (canon(groups, p) === c0) return p; return 6; }
+
+function generate(seed, level) {
+  const cfg = LEVELS[level], rng = seedFrom(seed);
+  const ri = n => Math.floor(rng() * n), pick = a => a[ri(a.length)];
+  const { cells: base, nb } = buildGrid(cfg.R);
+  const N = base.length;
+
+  function makeNet(type) {
+    const prim = [1, 2, 4];
+    const a = pick(prim);
+    if (type === 'mix') { const b = pick(prim.filter(p => p !== a)); return [{ kind: 'src', color: a }, { kind: 'rcv', color: a | b }, { kind: 'src', color: b }]; }
+    if (type === 'fork') return [{ kind: 'src', color: a }, { kind: 'rcv', color: a }, { kind: 'rcv', color: a }];
+    return [{ kind: 'src', color: a }, { kind: 'rcv', color: a }];
+  }
+
+  function tryBuild() {
+    const cells = base.map(c => ({ q: c.q, r: c.r, groups: [], kind: null, color: 0 }));
+    const free = () => cells.map((_, i) => i).filter(i => !cells[i].kind && !cells[i].groups.length);
+    for (let n = 0; n < cfg.nets.length; n++) {
+      const ends = makeNet(cfg.nets[n]);
+      const w = cells.map(() => 1 + rng() * cfg.wander);
+      const f = free();
+      if (f.length < 2) return null;
+      const a = pick(f);
+      const far = f.filter(i => i !== a && hexDist(cells[a], cells[i]) >= cfg.R);
+      if (!far.length) return null;
+      const b = pick(far);
+      let path = route(cells, nb, a, j => j === b, n, w);
+      if (!path) return null;
+      applyPath(cells, path, n, ends[0], ends[1]);
+      for (let k = 2; k < ends.length; k++) {
+        const opts = free().filter(i => !cells.some(c => c.groups.some(g => g.net === n) && hexDist(c, cells[i]) < 2));
+        if (!opts.length) return null;
+        path = route(cells, nb, pick(opts), (j, ein) => attachable(cells[j], n, ein), n, w);
+        if (!path) return null;
+        applyPath(cells, path, n, ends[k], null);
+      }
+    }
+    return cells;
+  }
+
+  let best = null;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const cells = tryBuild();
+    if (!cells) continue;
+    const used = cells.filter(c => c.groups.length).length / N;
+    if (!best || used > best.used) best = { cells, used };
+    if (used >= cfg.cover) break;
+  }
+  const cells = best.cells;
+  cells.forEach(c => { c.period = c.groups.length ? period(c.groups) : 1; });
+  do { cells.forEach(c => { c.rot = c.groups.length ? ri(6) : 0; }); } while (evaluate(cells, nb).won || parOf(cells) < cells.length / 3);
+  cells.forEach(c => { c.rot0 = c.rot; });
+  return { cells, nb, R: cfg.R, par: parOf(cells) };
+}
+
+const parOf = cells => cells.reduce((s, c) => s + (c.period - c.rot % c.period) % c.period, 0);
+
+function evaluate(cells, nb) {
+  const nodeOf = [], parent = [];
+  cells.forEach((c, i) => { nodeOf[i] = c.groups.map(() => { parent.push(parent.length); return parent.length - 1; }); });
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  let open = 0;
+  cells.forEach((c, i) => c.groups.forEach((g, gi) => g.edges.forEach(e => {
+    const re = (e + c.rot) % 6, j = nb[i][re];
+    if (j < 0) { open++; return; }
+    const d = cells[j], want = (re + 3) % 6;
+    const hi = d.groups.findIndex(h => h.edges.some(f => (f + d.rot) % 6 === want));
+    if (hi < 0) { open++; return; }
+    parent[find(nodeOf[i][gi])] = find(nodeOf[j][hi]);
+  })));
+  const mask = new Array(parent.length).fill(0);
+  cells.forEach((c, i) => { if (c.kind === 'src') mask[find(nodeOf[i][0])] |= c.color; });
+  let lit = 0, total = 0;
+  const colorOf = (i, gi) => mask[find(nodeOf[i][gi])];
+  cells.forEach((c, i) => { if (c.kind === 'rcv') { total++; c.lit = colorOf(i, 0) === c.color; if (c.lit) lit++; } });
+  return { colorOf, open, lit, total, won: lit === total && open === 0 };
+}
+
+// ---------- rendering ----------
+const svg = document.getElementById('board');
+const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+const sig = m => m ? `var(--sig-${m})` : 'var(--wire)';
+const pos = c => [1.5 * S * c.q, Math.sqrt(3) * S * (c.r + c.q / 2)];
+function groupPath(edges) {
+  if (edges.length === 2) { const [a, b] = edges.map(e => MID[e]); return `M${a[0]},${a[1]} Q0,0 ${b[0]},${b[1]}`; }
+  return edges.map(e => `M${MID[e][0]},${MID[e][1]} L0,0`).join(' ');
+}
+
+let game = null;
+
+function draw() {
+  const { cells, R } = game;
+  svg.innerHTML = '';
+  const hw = 1.5 * S * R + S + 4, hh = Math.sqrt(3) * S * R + AP + 4;
+  svg.setAttribute('viewBox', `${-hw} ${-hh} ${2 * hw} ${2 * hh}`);
+  cells.forEach((c, i) => {
+    const [x, y] = pos(c);
+    const g = el('g', { transform: `translate(${x.toFixed(2)},${y.toFixed(2)})` }, svg);
+    if (!c.groups.length) { el('polygon', { points: HEX(S - 1.5), class: 'cell-empty' }, g); return; }
+    g.setAttribute('class', 'tile'); g.setAttribute('tabindex', '0');
+    g.setAttribute('aria-label', c.kind === 'src' ? 'Source tile' : c.kind === 'rcv' ? 'Receiver tile' : 'Tile');
+    el('polygon', { points: HEX(S - 1.5), class: 'cell-bg' }, g);
+    c.angle = c.rot * 60;
+    c.rotEl = el('g', { transform: `rotate(${c.angle})` }, g);
+    c.wires = c.groups.map((grp, gi) => {
+      if (gi > 0) el('path', { d: groupPath(grp.edges), class: 'halo' }, c.rotEl);
+      const p = el('path', { d: groupPath(grp.edges), class: 'wire' }, c.rotEl);
+      const hub = grp.edges.length > 2 ? el('circle', { r: 9, cx: 0, cy: 0 }, c.rotEl) : null;
+      return { p, hub };
+    });
+    if (c.kind === 'src') {
+      el('polygon', { points: HEX(S * 0.38), fill: sig(c.color), stroke: 'var(--tile)', 'stroke-width': 3 }, g);
+      const [px, py] = PIP[c.color];
+      el('circle', { cx: px * S, cy: py * S, r: S * 0.07, fill: 'var(--tile)' }, g);
+    } else if (c.kind === 'rcv') {
+      c.ring = el('circle', { r: S * 0.34, fill: 'var(--tile)', stroke: sig(c.color), 'stroke-width': 6 }, g);
+      c.pips = [1, 2, 4].filter(b => c.color & b).map(b => el('circle', { cx: PIP[b][0] * S, cy: PIP[b][1] * S, r: S * 0.075, fill: sig(b), stroke: 'var(--tile)', 'stroke-width': 0 }, g));
+    }
+    const act = () => tap(i);
+    g.addEventListener('click', act);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+  });
+  refresh();
+}
+
+function refresh() {
+  const { cells, nb } = game;
+  const ev = evaluate(cells, nb);
+  cells.forEach((c, i) => {
+    if (!c.groups.length) return;
+    c.wires.forEach((w, gi) => { const col = sig(ev.colorOf(i, gi)); w.p.style.stroke = col; if (w.hub) w.hub.style.fill = col; });
+    if (c.kind === 'rcv') {
+      c.ring.style.fill = c.lit ? sig(c.color) : 'var(--tile)';
+      c.pips.forEach(p => p.setAttribute('stroke-width', c.lit ? 3 : 0));
+    }
+  });
+  document.getElementById('s-moves').textContent = game.moves;
+  document.getElementById('s-par').textContent = game.par;
+  document.getElementById('s-lit').textContent = `${ev.lit}/${ev.total}`;
+  document.getElementById('s-open').textContent = ev.open;
+  if (ev.won && !game.solved) { game.solved = true; save(); }
+  showResult();
+}
+
+function spin(c, steps) {
+  const from = c.angle, to = c.angle + 60 * steps;
+  c.angle = to;
+  const token = c.anim = {};
+  if (reduced) { c.rotEl.setAttribute('transform', `rotate(${to})`); return; }
+  const t0 = performance.now(), dur = 130 + 40 * (steps - 1);
+  const frame = t => {
+    if (c.anim !== token) return;
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    c.rotEl.setAttribute('transform', `rotate(${from + (to - from) * e})`);
+    if (k < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+function tap(i) {
+  if (game.solved) return;
+  const c = game.cells[i];
+  c.rot = (c.rot + 1) % 6;
+  game.moves++;
+  spin(c, 1);
+  refresh();
+  save();
+}
+
+function resetBoard() {
+  if (game.solved) return;
+  game.cells.forEach(c => { if (!c.groups.length) return; const d = (c.rot0 - c.rot + 6) % 6; if (d) { c.rot = c.rot0; spin(c, d); } });
+  refresh();
+  save();
+}
+
+// ---------- modes, persistence, sharing ----------
+const today = new Date();
+const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 28)) / 864e5) + 1;
+let mode = 'daily';
+
+function save() {
+  if (mode !== 'daily') return;
+  try { localStorage.setItem('hexroute-' + dateKey, JSON.stringify({ rots: game.cells.map(c => c.rot), moves: game.moves, solved: game.solved })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem('hexroute-' + dateKey) || 'null');
+    if (!s || s.rots.length !== game.cells.length) return;
+    game.cells.forEach((c, i) => { c.rot = s.rots[i]; });
+    game.moves = s.moves; game.solved = s.solved;
+  } catch (e) {}
+}
+
+const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
+function shareText() {
+  const d = game.moves - game.par;
+  return mode === 'daily'
+    ? `Hexroute #${dailyNo} ⬢ ${fmtScore(d)}\n${game.moves} moves, par ${game.par}`
+    : `Hexroute practice (${game.level}) ⬢ ${fmtScore(game.moves - game.par)}\n${game.moves} moves, par ${game.par}`;
+}
+function showResult() {
+  const box = document.getElementById('result');
+  box.hidden = !game.solved;
+  if (!game.solved) return;
+  const d = game.moves - game.par;
+  document.getElementById('r-title').textContent =
+    d < 0 ? `Solved under par: ${fmtScore(d)}. You found a shorter route than the generator.` :
+    d === 0 ? 'Solved at par. Every tap counted.' : `Solved, ${fmtScore(d)} over par.`;
+  document.getElementById('r-share').value = shareText();
+  document.getElementById('next').hidden = mode !== 'practice';
+  svg.classList.add('solved');
+}
+
+function start(newMode) {
+  mode = newMode;
+  document.getElementById('tab-daily').setAttribute('aria-pressed', mode === 'daily');
+  document.getElementById('tab-practice').setAttribute('aria-pressed', mode === 'practice');
+  document.getElementById('size').hidden = document.getElementById('new').hidden = mode !== 'practice';
+  svg.classList.remove('solved');
+  if (mode === 'daily') {
+    game = generate('hexroute-daily-' + dateKey, 'medium');
+    game.level = 'medium';
+    document.getElementById('sub').textContent = `#${dailyNo}`;
+  } else {
+    const level = document.getElementById('size').value;
+    game = generate('hexroute-practice-' + Math.random(), level);
+    game.level = level;
+    document.getElementById('sub').textContent = 'practice';
+  }
+  game.moves = 0; game.solved = false;
+  if (mode === 'daily') restore();
+  draw();
+}
+
+document.getElementById('tab-daily').onclick = () => start('daily');
+document.getElementById('tab-practice').onclick = () => start('practice');
+document.getElementById('reset').onclick = resetBoard;
+document.getElementById('new').onclick = () => start('practice');
+document.getElementById('next').onclick = () => start('practice');
+document.getElementById('size').onchange = () => start('practice');
+document.getElementById('copy').onclick = e => {
+  const ta = document.getElementById('r-share'), btn = e.currentTarget;
+  const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Selected. Copy it manually'; };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy result', 1500); }, fallback);
+  } catch (err) { fallback(); }
+};
+
+start('daily');
+</script>
