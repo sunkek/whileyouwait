@@ -7,10 +7,16 @@ line ends.
 
 Live: <https://hexroute.suncake.xyz>
 
-Single self-contained page: `index.html`. It is also published as a private
-Claude artifact at https://claude.ai/artifact/6NVqBRB73ZTfo4aM9P6zwD, which
-wraps it in a document skeleton; the self-hosted image adds that skeleton from
-`.docker/head.html`. Deployment is described in `deploy/README.md`.
+Single self-contained page: `index.html` holds the page body, and the image
+adds the document skeleton from `.docker/head.html`. Deployment is described in
+`deploy/README.md`.
+
+## Authorship
+
+Built by Claude (Anthropic's coding agent), with Nikita Zotov directing. Claude
+proposed the concept and wrote the rules, the puzzle generator and the code.
+Nikita approved the direction, supplied the design system, and decided where
+and how it is hosted and deployed.
 
 ## How puzzles are made
 

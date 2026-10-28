@@ -1,6 +1,6 @@
-# index.html is the page body as published to the Claude artifact, which wraps
-# it in a document skeleton at publish time. head.html supplies that skeleton
-# (doctype, charset, viewport, base reset) for the self-hosted build.
+# index.html is the page body only (it started as a Claude artifact, which adds
+# the document skeleton at publish time). head.html supplies that skeleton:
+# doctype, charset, viewport and a base reset.
 FROM nginx:1.31-alpine
 COPY .docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY .docker/head.html index.html /tmp/page/
