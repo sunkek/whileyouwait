@@ -56,23 +56,32 @@ svg#graph { width: 100%; height: auto; display: block; touch-action: manipulatio
 .node rect.box { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; transition: fill 120ms var(--ease); }
 .node text.name { font: 500 12px var(--font-mono); fill: var(--fg); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .node text.tagline { font: 500 8px var(--font-mono); fill: var(--faint); text-anchor: middle; letter-spacing: 0.14em; pointer-events: none; }
-.node.degraded rect.box { stroke: var(--down); stroke-dasharray: 4 3; }
-.node.degraded text.name { fill: var(--down); }
-.node.down rect.box { fill: var(--down); stroke: var(--down); }
-.node.down text.name { fill: var(--down-ink); }
-.node .bar { fill: var(--brand); }
-.node .bar.probe { fill: var(--accent); }
+.node.alert rect.box { fill: var(--down-bg); stroke: var(--down); }
+.node.alert text.name { fill: var(--down); }
+.node.ok rect.box { stroke: var(--brand); }
+.node.nodata rect.box { stroke-dasharray: 4 3; fill: var(--subtle); }
+.node.nodata text.name { fill: var(--faint); }
+.node.sel rect.box { stroke: var(--fg); stroke-width: 2.5; }
+.node .dot { stroke: var(--surface); stroke-width: 1.5; }
+.node .chip { font: 500 8.5px var(--font-mono); text-anchor: middle; pointer-events: none; letter-spacing: 0.04em; }
+.chip.own { fill: var(--down); } .chip.upstream { fill: var(--accent-ink); } .chip.clean, .chip.fixed { fill: var(--brand); } .chip.nothing { fill: var(--faint); }
+.panel-act { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; box-shadow: var(--shadow-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; min-height: 92px; }
+.panel-act h3 { margin: 0; font: 600 16px var(--font-mono); }
+.panel-act p { margin: 0; color: var(--muted); font-size: 14px; }
+.log { font: 12.5px/1.7 var(--font-mono); color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.log li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; }
+.log b { font-weight: 500; color: var(--faint); font-variant-numeric: tabular-nums; }
+.log .own { color: var(--down); } .log .fixed, .log .clean { color: var(--brand); } .log .upstream { color: var(--accent-ink); }
+.ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); }
 .node:focus-visible rect.box { stroke: var(--fg); stroke-width: 2.5; }
-.node .flash { font: 500 9px var(--font-mono); fill: var(--accent-ink); text-anchor: middle; pointer-events: none; }
-.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.overlay .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; max-width: 320px; }
-.overlay .panel p { margin: 0; color: var(--muted); font-size: 14px; }
 .btn { border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font: 500 14px var(--font-sans); padding: 8px 14px; border-radius: 5px; cursor: pointer; transition: background 120ms var(--ease); }
 .btn:hover { background: var(--subtle); }
 .btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
 .btn:active { transform: translateY(0.5px); }
-.btn:focus-visible, .tabs button:focus-visible { outline: none; box-shadow: var(--ring); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn:focus-visible, .tabs button:focus-visible, select:focus-visible { outline: none; box-shadow: var(--ring); }
 .result { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; box-shadow: var(--shadow-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .result h2 { font-weight: 600; font-size: 18px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
 .result textarea { font: 13px var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 5px; padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
@@ -83,14 +92,15 @@ svg#graph { width: 100%; height: auto; display: block; touch-action: manipulatio
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font: 12px var(--font-mono); color: var(--muted); }
 .legend span { display: inline-flex; gap: 6px; align-items: center; }
 .sw { width: 14px; height: 10px; border-radius: 2px; border: 1.5px solid var(--border-strong); background: var(--surface); }
-.sw.down { background: var(--down); border-color: var(--down); }
-.sw.deg { border-color: var(--down); border-style: dashed; }
+.sw.alert { background: var(--down-bg); border-color: var(--down); }
+.sw.ok { border-color: var(--brand); }
+.sw.nodata { border-style: dashed; background: var(--subtle); }
 </style>
 
 <div class="wrap">
   <header>
     <div>
-      <div class="eyebrow" id="eyebrow">on-call shift · 90 s</div>
+      <div class="eyebrow" id="eyebrow"></div>
       <h1>Root Cause</h1>
     </div>
     <div class="tabs" role="group" aria-label="Mode">
@@ -100,71 +110,155 @@ svg#graph { width: 100%; height: auto; display: block; touch-action: manipulatio
   </header>
 
   <div class="stats">
-    <div class="stat"><b id="s-time">1:30</b><small>Left</small></div>
-    <div class="stat"><b id="s-up">100.00%</b><small>Uptime</small></div>
-    <div class="stat"><b id="s-open">0</b><small>Faults</small></div>
-    <div class="stat"><b id="s-mttr">–</b><small>MTTR</small></div>
+    <div class="stat"><b id="s-clock">T+0m</b><small>Clock</small></div>
+    <div class="stat"><b id="s-down">0</b><small>User-min</small></div>
+    <div class="stat"><b id="s-roots">0/2</b><small>Fixed</small></div>
+    <div class="stat"><b id="s-par">–</b><small>Par</small></div>
   </div>
 
-  <div class="board">
-    <svg id="graph" viewBox="0 0 360 300" role="application" aria-label="Service dependency graph"></svg>
-    <div class="overlay" id="overlay">
-      <div class="panel">
-        <strong id="ov-title">Your shift starts now</strong>
-        <p id="ov-text">Faults arrive faster as the shift goes on. Tap a service to fix it. Fix the broken one, not the ones alerting because of it.</p>
-        <div class="row"><button class="btn primary" id="start">Start shift</button></div>
-      </div>
-    </div>
-  </div>
+  <svg id="graph" viewBox="0 0 360 300" role="application" aria-label="Service dependency graph"></svg>
 
   <div class="legend" aria-hidden="true">
-    <span><i class="sw down"></i>down: the fault</span>
-    <span><i class="sw deg"></i>degraded: a dependency is down</span>
+    <span><i class="sw alert"></i>alerting</span>
+    <span><i class="sw ok"></i>healthy</span>
+    <span><i class="sw nodata"></i>no monitoring</span>
   </div>
+
+  <div class="panel-act" id="panel" aria-live="polite"></div>
 
   <div class="result" id="result" hidden>
     <h2 id="r-title"></h2>
+    <p class="rules" id="r-par" style="margin:0"></p>
     <textarea id="r-share" rows="2" readonly aria-label="Shareable result"></textarea>
     <div class="row">
       <button class="btn primary" id="copy">Copy result</button>
-      <button class="btn" id="again">Practice shift</button>
+      <button class="btn" id="again">Practice incident</button>
     </div>
   </div>
 
-  <details class="rules">
+  <ol class="log" id="log"></ol>
+
+  <div class="ctl" id="practice-ctl" hidden>
+    <label for="k">Root causes</label>
+    <select id="k"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+    <button class="btn" id="new">New incident</button>
+  </div>
+
+  <details class="rules" open>
     <summary>How it works</summary>
     <ul>
-      <li>Arrows point from a service to what it depends on. A service is degraded when anything it depends on is down, directly or further along.</li>
-      <li>Uptime counts only the three services users hit: web, api and checkout.</li>
-      <li>You are one engineer. A fix takes about a second, postgres takes two, and you can work on one thing at a time.</li>
-      <li>Tapping a service that isn't down costs you a probe and finds nothing.</li>
-      <li>MTTR is the mean time from a fault appearing to its fix.</li>
-      <li>The daily shift is the same for everyone and can be played once a day. Practice shifts are random.</li>
+      <li>Arrows point from a service to what it depends on. A service fails if it has a fault, or if anything it depends on is failing.</li>
+      <li>Monitored services alert when they fail. Grey ones have no monitoring, so you can't see their state.</li>
+      <li>You know how many root causes there are. Tap a service to act on it.</li>
+      <li>Check logs takes 2 minutes and tells you whether the service has its own errors, is failing because of a dependency, or is clean.</li>
+      <li>Fix takes 5 minutes (postgres failover takes 8) and repairs the service if it has a fault. Otherwise the time is lost.</li>
+      <li>Every minute, each failing user-facing service (web, api, checkout) adds a user-minute of downtime. Only actions move the clock, so take as long as you like to think.</li>
+      <li>Par is what the best possible strategy scores on this incident, playing without knowing the answer. A lucky guess can beat it.</li>
     </ul>
   </details>
 </div>
 
 <script>
-const DUR = 90;
-// id, label, x, y, deps, user-facing
+// Root Cause, turn-based. A hidden set of k faulty services; you see alerts from
+// monitored services only. Every action costs incident minutes, and the score is
+// user-facing downtime in user-minutes. Par is what the optimal strategy (minimum
+// expected downtime over every fault set consistent with what you have seen)
+// scores on this incident.
 const NODES = [
-  ['web', 'web', 70, 40, ['cdn', 'auth', 'catalog'], true],
-  ['api', 'api', 180, 40, ['auth', 'catalog', 'cart'], true],
-  ['checkout', 'checkout', 290, 40, ['auth', 'cart', 'payments'], true],
-  ['cdn', 'cdn', 38, 150, [], false],
-  ['auth', 'auth', 109, 150, ['postgres', 'cache'], false],
-  ['catalog', 'catalog', 180, 150, ['search', 'postgres'], false],
-  ['cart', 'cart', 251, 150, ['cache', 'queue'], false],
-  ['payments', 'payments', 322, 150, ['queue', 'postgres'], false],
-  ['search', 'search', 54, 260, [], false],
-  ['postgres', 'postgres', 138, 260, [], false],
-  ['cache', 'cache', 222, 260, [], false],
-  ['queue', 'queue', 306, 260, [], false],
-].map(([id, label, x, y, deps, user]) => ({ id, label, x, y, deps, user }));
-const BY = Object.fromEntries(NODES.map(n => [n.id, n]));
-const USERS = NODES.filter(n => n.user);
-const FIX_TIME = id => id === 'postgres' ? 1.5 : 0.8;
-const PROBE_TIME = 0.7;
+  ['web', 70, 40, ['cdn', 'auth', 'catalog'], true],
+  ['api', 180, 40, ['auth', 'catalog', 'cart'], true],
+  ['checkout', 290, 40, ['auth', 'cart', 'payments'], true],
+  ['cdn', 38, 150, [], false],
+  ['auth', 109, 150, ['postgres', 'cache'], false],
+  ['catalog', 180, 150, ['search', 'postgres'], false],
+  ['cart', 251, 150, ['cache', 'queue'], false],
+  ['payments', 322, 150, ['queue', 'postgres'], false],
+  ['search', 54, 260, [], false],
+  ['postgres', 138, 260, [], false],
+  ['cache', 222, 260, [], false],
+  ['queue', 306, 260, [], false],
+].map(([id, x, y, deps, user], i) => ({ id, i, x, y, deps, user }));
+const N = NODES.length;
+const IDX = Object.fromEntries(NODES.map(n => [n.id, n.i]));
+const DEP = NODES.map(n => n.deps.map(d => IDX[d]));
+const USER_MASK = NODES.reduce((m, n) => n.user ? m | 1 << n.i : m, 0);
+const PG = IDX.postgres;
+const CHECK_MIN = 2;
+const FIX_MIN = s => s === PG ? 8 : 5;
+
+// Dependencies first, so one pass computes health.
+const TOPO = (() => { const out = [], seen = new Set(); const visit = s => { if (seen.has(s)) return; seen.add(s); DEP[s].forEach(visit); out.push(s); }; NODES.forEach(n => visit(n.i)); return out; })();
+const UNHEALTHY = new Int32Array(1 << N);
+for (let m = 0; m < 1 << N; m++) {
+  let u = 0;
+  for (const s of TOPO) if ((m >> s & 1) || DEP[s].some(d => u >> d & 1)) u |= 1 << s;
+  UNHEALTHY[m] = u;
+}
+const popcount = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
+const usersDown = h => popcount(UNHEALTHY[h] & USER_MASK);
+const duration = a => a.k === 'check' ? CHECK_MIN : FIX_MIN(a.s);
+const afterAct = (h, a) => a.k === 'fix' ? h & ~(1 << a.s) : h;
+// What the player observes. A check reads the service's own logs: it is
+// failing itself, failing because of a dependency, or clean. A fix reports
+// whether there was anything to fix, and the monitored alerts then update.
+function outcome(h, a, mon) {
+  if (a.k === 'check') return (h >> a.s & 1) ? 'own' : (UNHEALTHY[h] >> a.s & 1) ? 'upstream' : 'clean';
+  return ((h >> a.s & 1) ? 'fixed' : 'nothing') + ':' + (UNHEALTHY[afterAct(h, a)] & mon);
+}
+
+function hypotheses(k, mon, alerts) {
+  const out = [];
+  for (let m = 0; m < 1 << N; m++) if (popcount(m) === k && (UNHEALTHY[m] & mon) === alerts) out.push(m);
+  return out;
+}
+
+function makeSolver(mon) {
+  const memo = new Map();
+  function best(B) {
+    if (B.every(h => h === 0)) return { v: 0, a: null };
+    const key = B.join(',');
+    const hit = memo.get(key);
+    if (hit) return hit;
+    let res = { v: Infinity, a: null };
+    const union = B.reduce((x, h) => x | h, 0);
+    const acts = [];
+    for (let s = 0; s < N; s++) {
+      if (union >> s & 1) acts.push({ k: 'fix', s });
+      acts.push({ k: 'check', s });
+    }
+    for (const a of acts) {
+      const groups = new Map();
+      for (const h of B) { const o = outcome(h, a, mon); if (!groups.has(o)) groups.set(o, []); groups.get(o).push(h); }
+      if (a.k === 'check' && groups.size < 2) continue;
+      const d = duration(a);
+      let total = 0;
+      for (const G of groups.values()) {
+        for (const h of G) total += d * usersDown(h);
+        total += G.length * best(G.map(h => afterAct(h, a))).v;
+        if (total / B.length >= res.v) break;
+      }
+      const v = total / B.length;
+      if (v < res.v - 1e-9) res = { v, a };
+    }
+    memo.set(key, res);
+    return res;
+  }
+  return best;
+}
+
+// Play the optimal policy against the true fault set.
+function parRun(truth, B, mon, best) {
+  let h = truth, cost = 0, steps = [];
+  while (h) {
+    const a = best(B).a;
+    cost += duration(a) * usersDown(h);
+    const o = outcome(h, a, mon);
+    B = B.filter(x => outcome(x, a, mon) === o).map(x => afterAct(x, a));
+    h = afterAct(h, a);
+    steps.push(a);
+  }
+  return { cost, steps };
+}
 
 function rngFrom(str) {
   let h = 1779033703 ^ str.length;
@@ -173,224 +267,202 @@ function rngFrom(str) {
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
 
-// Fault schedule: times and weights only; the target is chosen among healthy services when the fault fires.
-function makeSchedule(seed) {
-  const rng = rngFrom(seed), out = [];
-  let t = 2.5;
-  while (t < DUR - 1) {
-    out.push({ t, r: rng() });
-    const gap = 9 + (3.4 - 9) * (t / DUR);
-    t += gap * (0.55 + 0.9 * rng());
-  }
-  return out;
-}
-
-function newGame(seed) {
-  return { seed, t: 0, sched: makeSchedule(seed), next: 0, broken: new Map(), work: null, downtime: 0,
-    fixes: [], probes: 0, ended: false, flash: null };
-}
-
-function health(g) {
-  const memo = {};
-  const ok = id => id in memo ? memo[id] : (memo[id] = !g.broken.has(id) && BY[id].deps.every(ok));
-  NODES.forEach(n => ok(n.id));
-  return memo;
-}
-
-function pickTarget(g, r) {
-  const cands = NODES.filter(n => !g.broken.has(n.id) && !(g.work && g.work.id === n.id));
-  if (!cands.length) return null;
-  const w = cands.map(n => n.id === 'postgres' ? 0.35 : n.user ? 0.6 : 1);
-  let x = r * w.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < cands.length; i++) { x -= w[i]; if (x <= 0) return cands[i].id; }
-  return cands[cands.length - 1].id;
-}
-
-function step(g, dt) {
-  if (g.ended) return;
-  const end = Math.min(DUR, g.t + dt);
-  while (g.t < end) {
-    const nextFault = g.next < g.sched.length ? g.sched[g.next].t : Infinity;
-    const workEnd = g.work ? g.work.end : Infinity;
-    const until = Math.min(end, nextFault, workEnd);
-    const h = health(g);
-    g.downtime += USERS.filter(u => !h[u.id]).length * (until - g.t);
-    g.t = until;
-    if (g.work && g.t >= g.work.end) {
-      const w = g.work;
-      g.work = null;
-      if (w.kind === 'fix') { g.fixes.push(g.t - g.broken.get(w.id)); g.broken.delete(w.id); }
-      else { g.probes++; g.flash = { id: w.id, until: g.t + 1.2 }; }
+function generate(seed, k) {
+  const rng = rngFrom(seed);
+  for (let attempt = 0; attempt < 400; attempt++) {
+    let mon = USER_MASK;
+    const others = NODES.filter(n => !n.user).map(n => n.i);
+    others.forEach(s => { if (rng() < 0.5) mon |= 1 << s; });
+    const unmon = N - popcount(mon);
+    if (unmon < 3 || unmon > 6) continue;
+    let truth = 0;
+    while (popcount(truth) < k) {
+      const s = Math.floor(rng() * N);
+      if (NODES[s].user && rng() < 0.6) continue;
+      truth |= 1 << s;
     }
-    if (g.next < g.sched.length && g.t >= g.sched[g.next].t) {
-      const id = pickTarget(g, g.sched[g.next].r);
-      if (id) g.broken.set(id, g.t);
-      g.next++;
-    }
+    const alerts = UNHEALTHY[truth] & mon;
+    const B0 = hypotheses(k, mon, alerts);
+    if (B0.length < (k === 1 ? 2 : 3) || B0.length > 40) continue;
+    const best = makeSolver(mon);
+    const par = parRun(truth, B0, mon, best);
+    if (k > 1 && !par.steps.some(a => a.k === 'check')) continue;
+    return { seed, k, mon, truth, alerts, suspects: B0.length, par: par.cost, parSteps: par.steps, expected: best(B0).v };
   }
-  if (g.t >= DUR) g.ended = true;
+  throw new Error('no puzzle for ' + seed);
 }
-
-function act(g, id) {
-  if (g.ended || g.work) return false;
-  const fix = g.broken.has(id);
-  g.work = { id, kind: fix ? 'fix' : 'probe', start: g.t, end: g.t + (fix ? FIX_TIME(id) : PROBE_TIME) };
-  return true;
-}
-
-const uptime = g => 1 - g.downtime / (USERS.length * Math.max(g.t, 1e-9));
-const mttr = g => g.fixes.length ? g.fixes.reduce((a, b) => a + b, 0) / g.fixes.length : null;
 // ---------- rendering
-const SLO = 0.80;
+
 const NS = 'http://www.w3.org/2000/svg';
 const W = 64, H = 34;
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = id => document.getElementById(id);
 const svg = $('graph');
 const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
-
 const today = new Date();
 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 28)) / 864e5) + 1;
-const SAVE_KEY = 'rootcause-' + dateKey;
+// Weekends get three root causes: more time to think.
+const dailyK = [0, 6].includes(today.getDay()) ? 3 : 2;
+const SAVE_KEY = 'rootcause2-' + dateKey;
+const CHIP = { own: 'own errors', upstream: 'upstream', clean: 'clean', fixed: 'fixed', nothing: 'nothing to fix' };
 
-let mode = 'daily', g = null, raf = 0, last = 0, els = {}, edges = [];
+let mode = 'daily', P = null, S = null, sel = null, els = [], edges = [];
+
+function newState() { return { h: P.truth, clock: 0, down: 0, actions: [], log: [], known: {}, fixed: 0, wasted: 0, checks: 0 }; }
+
+function apply(a) {
+  const d = duration(a);
+  S.down += d * usersDown(S.h);
+  S.clock += d;
+  let res;
+  if (a.k === 'check') res = outcome(S.h, a, P.mon).split(':')[0];
+  else if (S.h >> a.s & 1) { res = 'fixed'; S.h &= ~(1 << a.s); S.fixed++; }
+  else { res = 'nothing'; S.wasted++; }
+  if (a.k === 'check') S.checks++;
+  S.known[a.s] = res;
+  S.actions.push([a.k, a.s]);
+  S.log.push({ t: S.clock, text: `${a.k === 'check' ? 'checked' : a.s === PG ? 'failed over' : 'fixed'} ${NODES[a.s].id}`, res });
+}
 
 function build() {
   svg.innerHTML = '';
-  mk('defs', {}, svg).innerHTML =
-    '<marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/></marker>' +
-    '<marker id="arrow-bad" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--down)"/></marker>';
+  mk('defs', {}, svg).innerHTML = '<marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/></marker>';
   const eg = mk('g', {}, svg);
-  edges = [];
   NODES.forEach(n => n.deps.forEach(d => {
-    const m = BY[d];
+    const m = NODES[IDX[d]];
     const x1 = n.x, y1 = n.y + H / 2, x2 = m.x, y2 = m.y - H / 2 - 3;
-    const line = mk('path', { d: `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, eg);
-    edges.push({ from: n.id, to: d, el: line });
+    mk('path', { d: `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, eg);
   }));
-  els = {};
-  NODES.forEach(n => {
-    const grp = mk('g', { class: 'node', transform: `translate(${n.x},${n.y})`, tabindex: 0, role: 'button', 'aria-label': n.label }, svg);
+  els = NODES.map(n => {
+    const grp = mk('g', { class: 'node', transform: `translate(${n.x},${n.y})`, tabindex: 0, role: 'button', 'aria-label': n.id }, svg);
     if (n.user) mk('text', { class: 'tagline', y: -H / 2 - 6 }, grp).textContent = 'USERS';
     mk('rect', { class: 'box', x: -W / 2, y: -H / 2, width: W, height: H, rx: 5 }, grp);
-    mk('text', { class: 'name', y: 0 }, grp).textContent = n.label;
-    const bar = mk('rect', { class: 'bar', x: -W / 2 + 4, y: H / 2 - 6, width: 0, height: 3, rx: 1.5 }, grp);
-    const flash = mk('text', { class: 'flash', y: H / 2 + 12 }, grp);
-    const go = () => { if (g && !g.ended && raf && act(g, n.id)) paint(); };
-    grp.addEventListener('pointerdown', e => { e.preventDefault(); go(); });
-    grp.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
-    els[n.id] = { grp, bar, flash };
+    mk('text', { class: 'name', y: 0 }, grp).textContent = n.id;
+    const chip = mk('text', { class: 'chip', y: H / 2 + 11 }, grp);
+    const pick = () => { sel = n.i; render(); };
+    grp.addEventListener('click', pick);
+    grp.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    return { grp, chip };
   });
 }
 
-const fmtTime = s => { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-const pct = x => (x * 100).toFixed(2) + '%';
-
-function paint() {
-  const h = health(g);
+function render() {
+  const unhealthy = UNHEALTHY[S.h];
+  const done = S.h === 0;
   NODES.forEach(n => {
-    const e = els[n.id];
-    const down = g.broken.has(n.id);
-    e.grp.classList.toggle('down', down);
-    e.grp.classList.toggle('degraded', !down && !h[n.id]);
-    const w = g.work && g.work.id === n.id ? g.work : null;
-    e.bar.setAttribute('width', w ? (W - 8) * Math.min(1, (g.t - w.start) / (w.end - w.start)) : 0);
-    e.bar.classList.toggle('probe', !!w && w.kind === 'probe');
-    e.flash.textContent = g.flash && g.flash.id === n.id && g.t < g.flash.until ? 'no fault here' : '';
+    const e = els[n.i], mon = P.mon >> n.i & 1, bad = unhealthy >> n.i & 1;
+    e.grp.classList.toggle('alert', !!(mon && bad));
+    e.grp.classList.toggle('ok', !!(mon && !bad));
+    e.grp.classList.toggle('nodata', !mon);
+    e.grp.classList.toggle('sel', sel === n.i && !done);
+    const k = S.known[n.i];
+    e.chip.textContent = k ? CHIP[k] : '';
+    e.chip.setAttribute('class', 'chip ' + (k || ''));
   });
-  edges.forEach(ed => {
-    const bad = !h[ed.to];
-    ed.el.classList.toggle('bad', bad);
-    ed.el.setAttribute('marker-end', bad ? 'url(#arrow-bad)' : 'url(#arrow)');
+  $('eyebrow').textContent = mode === 'daily' ? `daily incident #${dailyNo} · ${P.k} root causes` : `practice incident · ${P.k} root cause${P.k > 1 ? 's' : ''}`;
+  $('s-clock').textContent = `T+${S.clock}m`;
+  $('s-down').textContent = S.down;
+  $('s-down').classList.toggle('warn', S.down > P.par);
+  $('s-roots').textContent = `${S.fixed}/${P.k}`;
+  $('s-par').textContent = P.par;
+  renderPanel(done);
+  $('log').innerHTML = '';
+  S.log.forEach(l => {
+    const li = document.createElement('li');
+    li.innerHTML = `<b>T+${l.t}m</b><span></span>`;
+    const span = li.querySelector('span');
+    span.textContent = `${l.text}: `;
+    const r = document.createElement('span');
+    r.className = l.res;
+    r.textContent = CHIP[l.res];
+    span.appendChild(r);
+    $('log').appendChild(li);
   });
-  $('s-time').textContent = fmtTime(DUR - g.t);
-  const up = g.t > 0 ? uptime(g) : 1;
-  $('s-up').textContent = pct(up);
-  $('s-up').classList.toggle('warn', up < SLO);
-  $('s-open').textContent = g.broken.size;
-  const m = mttr(g);
-  $('s-mttr').textContent = m == null ? '–' : m.toFixed(1) + 's';
+  if (done) showResult();
+  else $('result').hidden = true;
 }
 
-function loop(now) {
-  const dt = Math.min(0.1, (now - last) / 1000);
-  last = now;
-  step(g, dt);
-  paint();
-  if (g.ended) { raf = 0; finish(); return; }
-  raf = requestAnimationFrame(loop);
+function renderPanel(done) {
+  const p = $('panel');
+  p.innerHTML = '';
+  const users = usersDown(S.h);
+  if (done) {
+    p.appendChild(Object.assign(document.createElement('h3'), { textContent: 'Resolved' }));
+    p.appendChild(Object.assign(document.createElement('p'), { textContent: `All alerts clear at T+${S.clock}m.` }));
+    return;
+  }
+  if (sel === null) {
+    p.appendChild(Object.assign(document.createElement('h3'), { textContent: `${users} of 3 user-facing services down` }));
+    p.appendChild(Object.assign(document.createElement('p'), { textContent: `Every minute costs ${users} user-minute${users === 1 ? '' : 's'} right now. Tap a service to check or fix it.` }));
+    return;
+  }
+  const n = NODES[sel], mon = P.mon >> sel & 1;
+  p.appendChild(Object.assign(document.createElement('h3'), { textContent: n.id }));
+  const state = !mon ? 'No monitoring.' : (UNHEALTHY[S.h] >> sel & 1) ? 'Alerting.' : 'Healthy.';
+  const k = S.known[sel];
+  p.appendChild(Object.assign(document.createElement('p'), { textContent: `${state}${k ? ` Last result: ${CHIP[k]}.` : ''} ${users} user-facing service${users === 1 ? '' : 's'} down.` }));
+  const row = document.createElement('div');
+  row.className = 'row';
+  const fixMin = FIX_MIN(sel);
+  const mkBtn = (label, a, primary, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'btn' + (primary ? ' primary' : '');
+    b.textContent = label;
+    b.disabled = disabled;
+    b.onclick = () => { apply(a); save(); render(); };
+    row.appendChild(b);
+  };
+  mkBtn(`Check logs · ${CHECK_MIN} min · +${CHECK_MIN * users} user-min`, { k: 'check', s: sel }, false, false);
+  mkBtn(`${sel === PG ? 'Fail over' : 'Fix'} · ${fixMin} min · +${fixMin * users} user-min`, { k: 'fix', s: sel }, true, k === 'fixed');
+  p.appendChild(row);
 }
 
-function startShift() {
-  $('overlay').hidden = true;
-  $('result').hidden = true;
-  last = performance.now();
-  raf = requestAnimationFrame(loop);
+function verdict(d) {
+  if (d < 0) return `Resolved ${-d} user-minute${d === -1 ? '' : 's'} under par. Some of that was luck, and that counts.`;
+  if (d === 0) return 'Resolved at par. That was the best strategy available.';
+  if (d <= 5) return `Resolved, ${d} over par. A short postmortem.`;
+  return `Resolved, ${d} over par. The postmortem has a long timeline.`;
 }
 
-function verdict(up) {
-  if (up >= 0.9) return 'One nine. Hand over the pager and go to sleep.';
-  if (up >= SLO) return `SLO met at ${pct(up)}. A quiet handover.`;
-  if (up >= 0.6) return `Below the ${SLO * 100}% SLO. There will be a postmortem.`;
-  return 'Users noticed. The postmortem has a long timeline.';
+function shareText() {
+  const d = S.down - P.par;
+  const head = mode === 'daily' ? `Root Cause #${dailyNo}` : `Root Cause practice · ${P.k} roots`;
+  return `${head} · ${S.down} user-min · par ${P.par} (${d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d)})\n${S.checks} check${S.checks === 1 ? '' : 's'} · ${S.fixed + S.wasted} fix${S.fixed + S.wasted === 1 ? '' : 'es'} · ${S.wasted} wasted`;
 }
 
-function shareText(r) {
-  const head = mode === 'daily' ? `Root Cause #${dailyNo}` : 'Root Cause practice';
-  return `${head} · ${pct(r.up)} uptime\nMTTR ${r.mttr == null ? '–' : r.mttr.toFixed(1) + 's'} · ${r.fixes} fixed · ${r.probes} false lead${r.probes === 1 ? '' : 's'}`;
-}
-
-function showResult(r) {
-  $('r-title').textContent = verdict(r.up);
-  $('r-share').value = shareText(r);
+function showResult() {
+  $('r-title').textContent = verdict(S.down - P.par);
+  const roots = NODES.filter(n => P.truth >> n.i & 1).map(n => n.id).join(' and ');
+  $('r-par').textContent = `Root causes: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : 'fix'} ${NODES[a.s].id}`).join(' → ')}.`;
+  $('r-share').value = shareText();
+  $('again').hidden = false;
   $('result').hidden = false;
 }
 
-function finish() {
-  const r = { up: uptime(g), mttr: mttr(g), fixes: g.fixes.length, probes: g.probes };
-  if (mode === 'daily') { try { localStorage.setItem(SAVE_KEY, JSON.stringify(r)); } catch (e) {} }
-  showResult(r);
-  $('overlay').hidden = false;
-  $('ov-title').textContent = 'Shift over';
-  $('ov-text').textContent = `${pct(r.up)} uptime against a ${SLO * 100}% SLO.`;
-  $('start').textContent = 'Practice shift';
-  $('start').onclick = () => setMode('practice', true);
+function save() {
+  if (mode !== 'daily') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S.actions)); } catch (e) {}
 }
 
-function setMode(m, autostart) {
-  if (raf) { cancelAnimationFrame(raf); raf = 0; }
+function start(m) {
   mode = m;
   $('tab-daily').setAttribute('aria-pressed', m === 'daily');
   $('tab-practice').setAttribute('aria-pressed', m === 'practice');
-  $('eyebrow').textContent = m === 'daily' ? `daily shift #${dailyNo} · 90 s` : 'practice shift · 90 s';
-  g = newGame(m === 'daily' ? 'rootcause-daily-' + dateKey : 'rootcause-' + Math.random());
-  paint();
-  $('result').hidden = true;
-  $('overlay').hidden = false;
-  $('start').onclick = startShift;
-  let saved = null;
-  if (m === 'daily') { try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {} }
-  if (saved) {
-    $('ov-title').textContent = "Today's shift is done";
-    $('ov-text').textContent = `${pct(saved.up)} uptime. A new daily shift starts tomorrow.`;
-    $('start').textContent = 'Practice shift';
-    $('start').onclick = () => setMode('practice', true);
-    showResult(saved);
-    return;
+  $('practice-ctl').hidden = m !== 'practice';
+  P = m === 'daily' ? generate('rootcause-daily-' + dateKey, dailyK) : generate('rootcause-' + Math.random(), +$('k').value);
+  S = newState();
+  sel = null;
+  if (m === 'daily') {
+    try { (JSON.parse(localStorage.getItem(SAVE_KEY) || '[]') || []).forEach(([k, s]) => { if (S.h) apply({ k, s }); }); } catch (e) {}
   }
-  $('ov-title').textContent = m === 'daily' ? 'Your shift starts now' : 'Practice shift';
-  $('ov-text').textContent = 'Faults arrive faster as the shift goes on. Tap a service to fix it. Fix the broken one, not the ones alerting because of it.';
-  $('start').textContent = 'Start shift';
-  if (autostart) startShift();
+  render();
 }
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && raf) { cancelAnimationFrame(raf); raf = 0; $('overlay').hidden = false; $('ov-title').textContent = 'Paused'; $('ov-text').textContent = 'The shift waits while this page is hidden.'; $('start').textContent = 'Resume'; $('start').onclick = startShift; }
-});
-$('tab-daily').onclick = () => setMode('daily');
-$('tab-practice').onclick = () => setMode('practice');
-$('again').onclick = () => setMode('practice', true);
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('new').onclick = () => start('practice');
+$('k').onchange = () => start('practice');
+$('again').onclick = () => start('practice');
 $('copy').onclick = e => {
   const ta = $('r-share'), btn = e.currentTarget;
   const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Selected. Copy it manually'; };
@@ -398,5 +470,5 @@ $('copy').onclick = e => {
 };
 
 build();
-setMode('daily');
+start('daily');
 </script>
