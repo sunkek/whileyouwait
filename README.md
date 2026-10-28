@@ -7,7 +7,7 @@ earlier). You compose runs, any tests in any order, read which tests pass and
 fail, and name all three dependencies. Nothing moves until you act, so there
 is no time pressure: the score is CI time, against a greedy bot.
 
-Live: not deployed yet (planned: <https://flaky.suncake.xyz>)
+Live: <https://flaky.suncake.xyz>
 
 Single self-contained page: `index.html` holds the page body, and the image
 adds the document skeleton from `.docker/head.html`. Deployment is described in
