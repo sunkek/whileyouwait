@@ -22,7 +22,16 @@ wraps it in a document skeleton; the self-hosted image adds that skeleton from
   minimum, so players can finish under par.
 - The daily puzzle is seeded from the local date; #1 is 2026-10-28.
 
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). `node scripts/check-generator.mjs` checks
+that generated puzzles are solvable.
+
 ## Status
 
 Toy, not a product. Next test: share with 10-20 people and check unprompted
 day-3 and day-7 returns before considering a mobile port.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
