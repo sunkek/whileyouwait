@@ -54,7 +54,7 @@ svg#graph { width: 100%; height: auto; display: block; touch-action: manipulatio
 .edge.bad { stroke: var(--down); stroke-width: 2; stroke-dasharray: 5 4; }
 .node { cursor: pointer; outline: none; }
 .node rect.box { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; transition: fill 120ms var(--ease); }
-.node text.name { font: 500 12px var(--font-mono); fill: var(--fg); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.node text.name { font: 500 11px var(--font-mono); fill: var(--fg); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .node text.tagline { font: 500 8px var(--font-mono); fill: var(--faint); text-anchor: middle; letter-spacing: 0.14em; pointer-events: none; }
 .node.alert rect.box { fill: var(--down-bg); stroke: var(--down); }
 .node.alert text.name { fill: var(--down); }
@@ -110,7 +110,7 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
   </header>
 
   <div class="stats">
-    <div class="stat"><b id="s-clock">T+0m</b><small>Clock</small></div>
+    <div class="stat"><b id="s-users">0/3</b><small>Users down</small></div>
     <div class="stat"><b id="s-down">0</b><small>User-min</small></div>
     <div class="stat"><b id="s-roots">0</b><small>Fixed</small></div>
     <div class="stat"><b id="s-par">–</b><small>Par</small></div>
@@ -145,12 +145,12 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
   <details class="rules" open>
     <summary>How it works</summary>
     <ul>
-      <li>Arrows point from a service to what it depends on. A service fails if it has a fault, or if anything it depends on is failing.</li>
+      <li>Every incident runs on a different architecture. Arrows point from a service to what it depends on. A service fails if it has a fault, or if anything it depends on is failing.</li>
       <li>Monitored services alert when they fail. Grey ones have no monitoring, so you can't see their state.</li>
       <li>There are one, two or three root causes, and you aren't told how many. Tap a service to act on it.</li>
       <li>Check logs takes 2 minutes and tells you whether the service has its own errors, is failing because of a dependency, or is clean.</li>
-      <li>Fix takes 5 minutes (postgres failover takes 8) and repairs the service if it has a fault. Otherwise the time is lost.</li>
-      <li>Every minute, each failing user-facing service (web, api, checkout) adds a user-minute of downtime. Only actions move the clock, so take as long as you like to think.</li>
+      <li>Fix takes 5 minutes, and failing over a datastore (bottom row) takes 8. Either repairs the service if it has a fault. Otherwise the time is lost.</li>
+      <li>Every minute, each failing user-facing service (marked USERS) adds a user-minute of downtime. Only actions take time, so think as long as you like.</li>
       <li>Par is what the best possible strategy scores on this incident, playing without knowing the answer and treating one, two and three root causes as equally likely. A lucky guess can beat it.</li>
     </ul>
   </details>
@@ -158,70 +158,122 @@ select { font: 500 14px var(--font-sans); padding: 7px 8px; border-radius: 5px; 
 
 <script src="puzzles.js"></script>
 <script>
-// Root Cause, turn-based. A hidden set of k faulty services; you see alerts from
-// monitored services only. Every action costs incident minutes, and the score is
-// user-facing downtime in user-minutes. Par is what the optimal strategy (minimum
-// expected downtime over every fault set consistent with what you have seen)
-// scores on this incident.
-const NODES = [
-  ['web', 70, 40, ['cdn', 'auth', 'catalog'], true],
-  ['api', 180, 40, ['auth', 'catalog', 'cart'], true],
-  ['checkout', 290, 40, ['auth', 'cart', 'payments'], true],
-  ['cdn', 38, 150, [], false],
-  ['auth', 109, 150, ['postgres', 'cache'], false],
-  ['catalog', 180, 150, ['search', 'postgres'], false],
-  ['cart', 251, 150, ['cache', 'queue'], false],
-  ['payments', 322, 150, ['queue', 'postgres'], false],
-  ['search', 54, 260, [], false],
-  ['postgres', 138, 260, [], false],
-  ['cache', 222, 260, [], false],
-  ['queue', 306, 260, [], false],
-].map(([id, x, y, deps, user], i) => ({ id, i, x, y, deps, user }));
-const N = NODES.length;
-const IDX = Object.fromEntries(NODES.map(n => [n.id, n.i]));
-const DEP = NODES.map(n => n.deps.map(d => IDX[d]));
-const USER_MASK = NODES.reduce((m, n) => n.user ? m | 1 << n.i : m, 0);
-const PG = IDX.postgres;
+// Root Cause. Each incident runs on a randomly generated but plausible
+// architecture: user-facing apps, services, datastores. A hidden set of one
+// to three services is faulty and every service depending on a faulty one
+// fails too. The player sees alerts from monitored services only. Every
+// action costs incident minutes, and the score is user-facing downtime in
+// user-minutes. Par is what the optimal strategy (minimum expected downtime
+// over every fault set consistent with what has been seen) scores on this
+// incident.
 const CHECK_MIN = 2;
-const FIX_MIN = s => s === PG ? 8 : 5;
-
-// Dependencies first, so one pass computes health.
-const TOPO = (() => { const out = [], seen = new Set(); const visit = s => { if (seen.has(s)) return; seen.add(s); DEP[s].forEach(visit); out.push(s); }; NODES.forEach(n => visit(n.i)); return out; })();
-const UNHEALTHY = new Int32Array(1 << N);
-for (let m = 0; m < 1 << N; m++) {
-  let u = 0;
-  for (const s of TOPO) if ((m >> s & 1) || DEP[s].some(d => u >> d & 1)) u |= 1 << s;
-  UNHEALTHY[m] = u;
-}
-const popcount = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
-const usersDown = h => popcount(UNHEALTHY[h] & USER_MASK);
-const duration = a => a.k === 'check' ? CHECK_MIN : FIX_MIN(a.s);
-const afterAct = (h, a) => a.k === 'fix' ? h & ~(1 << a.s) : h;
-// The player does not know how many root causes there are: any set of one to
-// three faulty services that explains the alerts is a hypothesis. Prior: each
-// size is equally likely overall, so a single fault outweighs any one pair.
+const TIER_FIX_MIN = [5, 5, 8];
 const MAX_ROOTS = 3;
-const CHOOSE = n => k => { let r = 1; for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1); return r; };
-const WEIGHT = [0, 1, 2, 3].map(k => k ? 1 / CHOOSE(N)(k) : 0);
-const weight = h => WEIGHT[popcount(h)];
+
+// Role catalogue: tier (0 user-facing, 1 service, 2 datastore) and what each
+// role may plausibly depend on.
+const ROLES = {
+  web: [0, ['cdn', 'auth', 'catalog', 'recs', 'profile', 'search']],
+  api: [0, ['auth', 'catalog', 'cart', 'orders', 'profile', 'inventory']],
+  checkout: [0, ['auth', 'cart', 'payments', 'orders', 'pricing']],
+  admin: [0, ['auth', 'orders', 'inventory', 'notify', 'profile']],
+  mobile: [0, ['auth', 'catalog', 'cart', 'notify', 'recs']],
+  cdn: [1, ['s3']],
+  auth: [1, ['postgres', 'redis']],
+  catalog: [1, ['postgres', 'elastic', 'redis']],
+  search: [1, ['elastic', 'redis']],
+  cart: [1, ['redis', 'postgres']],
+  payments: [1, ['postgres', 'kafka']],
+  orders: [1, ['postgres', 'kafka']],
+  profile: [1, ['postgres', 's3']],
+  inventory: [1, ['postgres', 'kafka']],
+  pricing: [1, ['redis', 'postgres']],
+  recs: [1, ['redis', 'kafka', 'elastic']],
+  notify: [1, ['kafka', 'redis']],
+  postgres: [2, []], redis: [2, []], kafka: [2, []], elastic: [2, []], s3: [2, []],
+};
+const tierOf = id => ROLES[id][0];
+
+function rngFrom(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  let a = h >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const shuffled = (rng, xs) => { const a = xs.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+// Three user-facing apps, three to five services, two to four datastores.
+// Within a tier, nodes are ordered by where their parents sit, which keeps
+// arrows from crossing more than they must. Returns a list of [id, [dep ids]]
+// in layout order, or null to retry.
+function makeArchitecture(rng) {
+  const deps = {};
+  const users = shuffled(rng, Object.keys(ROLES).filter(r => tierOf(r) === 0)).slice(0, 3);
+  users.forEach(u => { deps[u] = shuffled(rng, ROLES[u][1]).slice(0, 2 + Math.floor(rng() * 2)); });
+  const services = [...new Set(users.flatMap(u => deps[u]))];
+  if (services.length < 3 || services.length > 5) return null;
+  services.forEach(s => { const opts = ROLES[s][1]; deps[s] = shuffled(rng, opts).slice(0, Math.min(opts.length, 1 + Math.floor(rng() * 2))); });
+  const stores = [...new Set(services.flatMap(s => deps[s]))];
+  if (stores.length < 2 || stores.length > 4 || users.length + services.length + stores.length > 12) return null;
+  const pos = {};
+  users.forEach((u, i) => { pos[u] = (i + 0.5) / users.length; });
+  const place = tier => {
+    const parents = id => Object.keys(deps).filter(p => deps[p].includes(id));
+    tier.sort((a, b) => avg(parents(a).map(p => pos[p])) - avg(parents(b).map(p => pos[p])));
+    tier.forEach((id, i) => { pos[id] = (i + 0.5) / tier.length; });
+  };
+  const avg = xs => xs.reduce((x, y) => x + y, 0) / xs.length;
+  place(services);
+  place(stores);
+  return [...users, ...services, ...stores].map(id => [id, deps[id] || []]);
+}
+
+const popcount = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
+
+// Precomputes health for every fault set: UNHEALTHY[m] is the set of services
+// failing when the services in m are faulty.
+function compile(arch) {
+  const nodes = arch.map(([id], i) => ({ id, i, tier: tierOf(id) }));
+  const index = Object.fromEntries(nodes.map(n => [n.id, n.i]));
+  const N = nodes.length;
+  const DEP = arch.map(([, d]) => d.map(x => index[x]));
+  const topo = [], seen = new Set();
+  const visit = s => { if (seen.has(s)) return; seen.add(s); DEP[s].forEach(visit); topo.push(s); };
+  nodes.forEach(n => visit(n.i));
+  const UNHEALTHY = new Int32Array(1 << N);
+  for (let m = 0; m < 1 << N; m++) {
+    let u = 0;
+    for (const s of topo) if ((m >> s & 1) || DEP[s].some(d => u >> d & 1)) u |= 1 << s;
+    UNHEALTHY[m] = u;
+  }
+  const USER_MASK = nodes.reduce((m, n) => n.tier === 0 ? m | 1 << n.i : m, 0);
+  // Prior over fault sets: each size is equally likely overall.
+  const choose = k => { let r = 1; for (let i = 0; i < k; i++) r = r * (N - i) / (i + 1); return r; };
+  const WEIGHT = [0, 1, 2, 3].map(k => k ? 1 / choose(k) : 0);
+  return { arch, nodes, N, DEP, UNHEALTHY, USER_MASK, WEIGHT };
+}
+
+const usersDown = (G, h) => popcount(G.UNHEALTHY[h] & G.USER_MASK);
+const duration = (G, a) => a.k === 'check' ? CHECK_MIN : TIER_FIX_MIN[G.nodes[a.s].tier];
+const weight = (G, h) => G.WEIGHT[popcount(h)];
 
 // What the player observes, given the hypothesis h and the services already
 // fixed (F). A check reads the service's own logs: failing itself, failing
 // because of a dependency, or clean. A fix reports whether there was anything
 // to fix, and the monitored alerts then update.
-function outcome(h, F, a, mon) {
+function outcome(G, h, F, a, mon) {
   const rem = h & ~F;
-  if (a.k === 'check') return (rem >> a.s & 1) ? 'own' : (UNHEALTHY[rem] >> a.s & 1) ? 'upstream' : 'clean';
-  return ((rem >> a.s & 1) ? 'fixed' : 'nothing') + ':' + (UNHEALTHY[rem & ~(1 << a.s)] & mon);
+  if (a.k === 'check') return (rem >> a.s & 1) ? 'own' : (G.UNHEALTHY[rem] >> a.s & 1) ? 'upstream' : 'clean';
+  return ((rem >> a.s & 1) ? 'fixed' : 'nothing') + ':' + (G.UNHEALTHY[rem & ~(1 << a.s)] & mon);
 }
 
-function hypotheses(mon, alerts) {
+function hypotheses(G, mon, alerts) {
   const out = [];
-  for (let m = 1; m < 1 << N; m++) { const c = popcount(m); if (c <= MAX_ROOTS && (UNHEALTHY[m] & mon) === alerts) out.push(m); }
+  for (let m = 1; m < 1 << G.N; m++) if (popcount(m) <= MAX_ROOTS && (G.UNHEALTHY[m] & mon) === alerts) out.push(m);
   return out;
 }
 
-function makeSolver(mon) {
+function makeSolver(G, mon) {
   const memo = new Map();
   function best(B, F) {
     if (B.every(h => (h & ~F) === 0)) return { v: 0, a: null };
@@ -229,23 +281,23 @@ function makeSolver(mon) {
     const hit = memo.get(key);
     if (hit) return hit;
     let res = { v: Infinity, a: null };
-    const WB = B.reduce((x, h) => x + weight(h), 0);
+    const WB = B.reduce((x, h) => x + weight(G, h), 0);
     const union = B.reduce((x, h) => x | (h & ~F), 0);
     const acts = [];
-    for (let s = 0; s < N; s++) {
+    for (let s = 0; s < G.N; s++) {
       if (union >> s & 1) acts.push({ k: 'fix', s });
       acts.push({ k: 'check', s });
     }
     for (const a of acts) {
       const groups = new Map();
-      for (const h of B) { const o = outcome(h, F, a, mon); if (!groups.has(o)) groups.set(o, []); groups.get(o).push(h); }
+      for (const h of B) { const o = outcome(G, h, F, a, mon); if (!groups.has(o)) groups.set(o, []); groups.get(o).push(h); }
       if (a.k === 'check' && groups.size < 2) continue;
-      const d = duration(a), F2 = a.k === 'fix' ? F | 1 << a.s : F;
+      const d = duration(G, a), F2 = a.k === 'fix' ? F | 1 << a.s : F;
       let total = 0;
-      for (const G of groups.values()) {
+      for (const grp of groups.values()) {
         let wg = 0;
-        for (const h of G) { const w = weight(h); wg += w; total += w * d * usersDown(h & ~F); }
-        total += wg * best(G, F2).v;
+        for (const h of grp) { const w = weight(G, h); wg += w; total += w * d * usersDown(G, h & ~F); }
+        total += wg * best(grp, F2).v;
         if (total / WB >= res.v) break;
       }
       const v = total / WB;
@@ -258,61 +310,65 @@ function makeSolver(mon) {
 }
 
 // Play the optimal policy against the true fault set.
-function parRun(truth, B, mon, best) {
+function parRun(G, truth, B, mon, best) {
   let F = 0, cost = 0;
   const steps = [];
   while (truth & ~F) {
     const a = best(B, F).a;
-    cost += duration(a) * usersDown(truth & ~F);
-    const o = outcome(truth, F, a, mon);
-    B = B.filter(x => outcome(x, F, a, mon) === o);
+    cost += duration(G, a) * usersDown(G, truth & ~F);
+    const o = outcome(G, truth, F, a, mon);
+    B = B.filter(x => outcome(G, x, F, a, mon) === o);
     if (a.k === 'fix') F |= 1 << a.s;
     steps.push(a);
   }
   return { cost, steps };
 }
 
-function rngFrom(str) {
-  let h = 1779033703 ^ str.length;
-  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
-  let a = h >>> 0;
-  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-}
-
-// Incidents are kept only if they need reasoning: no fault is certain from the
-// first alerts, and the optimal strategy reads logs at least twice.
+// Incidents are kept only if they need reasoning: no fault is certain from
+// the first alerts, and the optimal strategy reads logs at least twice.
 function generate(seed, k) {
   const rng = rngFrom(seed);
-  for (let attempt = 0; attempt < 600; attempt++) {
-    let mon = USER_MASK;
-    NODES.filter(n => !n.user).forEach(n => { if (rng() < 0.5) mon |= 1 << n.i; });
-    const unmon = N - popcount(mon);
+  for (let attempt = 0; attempt < 2000; attempt++) {
+    const arch = makeArchitecture(rng);
+    if (!arch) continue;
+    const G = compile(arch);
+    let mon = G.USER_MASK;
+    G.nodes.forEach(n => { if (n.tier && rng() < 0.5) mon |= 1 << n.i; });
+    const unmon = G.N - popcount(mon);
     if (unmon < 3 || unmon > 6) continue;
     let truth = 0;
     while (popcount(truth) < k) {
-      const s = Math.floor(rng() * N);
-      if (NODES[s].user && rng() < 0.6) continue;
+      const s = Math.floor(rng() * G.N);
+      if (G.nodes[s].tier === 0 && rng() < 0.6) continue;
       truth |= 1 << s;
     }
-    const alerts = UNHEALTHY[truth] & mon;
-    const B0 = hypotheses(mon, alerts);
+    const B0 = hypotheses(G, mon, G.UNHEALTHY[truth] & mon);
     if (B0.length < 4 || B0.length > 40 || B0.reduce((x, h) => x & h, -1) !== 0) continue;
-    const best = makeSolver(mon);
-    const par = parRun(truth, B0, mon, best);
+    const par = parRun(G, truth, B0, mon, makeSolver(G, mon));
     if (par.steps.filter(a => a.k === 'check').length < 2) continue;
-    return { seed, k, mon, truth, alerts, suspects: B0.length, par: par.cost, parSteps: par.steps, attempts: attempt + 1 };
+    return { k, arch, mon, truth, par: par.cost, steps: par.steps };
   }
-  throw new Error('no puzzle for ' + seed);
+  throw new Error('no incident for ' + seed);
 }
+
+// Stored form, used by puzzles.js: [roots, "id>dep.dep|id>…", monitored mask,
+// fault mask, par, "c3 f7 …"].
+const encode = p => [p.k, p.arch.map(([id, d]) => d.length ? `${id}>${d.join('.')}` : id).join('|'), p.mon, p.truth, p.par,
+  p.steps.map(a => (a.k === 'check' ? 'c' : 'f') + a.s).join(' ')];
+function decode([k, arch, mon, truth, par, steps]) {
+  const G = compile(arch.split('|').map(x => { const [id, d] = x.split('>'); return [id, d ? d.split('.') : []]; }));
+  return { k, G, mon, truth, par, parSteps: steps.split(' ').map(x => ({ k: x[0] === 'c' ? 'check' : 'fix', s: +x.slice(1) })) };
+}
+
 // One player action against the real faults (state.h holds the faults not yet
 // fixed). Shared by the page and by scripts/check-puzzles.mjs.
 const newPlay = truth => ({ h: truth, clock: 0, down: 0, known: {}, fixed: 0, wasted: 0, checks: 0 });
-function play(state, a) {
-  const d = duration(a);
-  state.down += d * usersDown(state.h);
+function play(G, state, a) {
+  const d = duration(G, a);
+  state.down += d * usersDown(G, state.h);
   state.clock += d;
   let res;
-  if (a.k === 'check') { res = outcome(state.h, 0, a, 0); state.checks++; }
+  if (a.k === 'check') { res = outcome(G, state.h, 0, a, 0); state.checks++; }
   else if (state.h >> a.s & 1) { res = 'fixed'; state.h &= ~(1 << a.s); state.fixed++; }
   else { res = 'nothing'; state.wasted++; }
   state.known[a.s] = res;
@@ -321,38 +377,41 @@ function play(state, a) {
 // ---------- rendering
 
 const NS = 'http://www.w3.org/2000/svg';
-const W = 64, H = 34;
+const W = 66, H = 34, TIER_Y = [40, 150, 260];
 const $ = id => document.getElementById(id);
 const svg = $('graph');
 const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
 const today = new Date();
 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 28)) / 864e5) + 1;
-const SAVE_KEY = 'rootcause3-' + dateKey;
+const SAVE_KEY = 'rootcause4-' + dateKey;
 const CHIP = { own: 'own errors', upstream: 'upstream', clean: 'clean', fixed: 'fixed', nothing: 'nothing to fix' };
+const fixVerb = (G, s) => G.nodes[s].tier === 2 ? 'Fail over' : 'Fix';
 
-let mode = 'daily', P = null, S = null, sel = null, els = [], edges = [];
+let mode = 'daily', P = null, S = null, sel = null, els = [];
 
 function newState() { return { ...newPlay(P.truth), actions: [], log: [] }; }
 
 function apply(a) {
-  const res = play(S, a);
+  const res = play(P.G, S, a);
   S.actions.push([a.k, a.s]);
-  S.log.push({ t: S.clock, text: `${a.k === 'check' ? 'checked' : a.s === PG ? 'failed over' : 'fixed'} ${NODES[a.s].id}`, res });
+  S.log.push({ t: S.clock, text: `${a.k === 'check' ? 'checked' : fixVerb(P.G, a.s) === 'Fail over' ? 'failed over' : 'fixed'} ${P.G.nodes[a.s].id}`, res });
 }
 
 function build() {
+  const G = P.G;
   svg.innerHTML = '';
   mk('defs', {}, svg).innerHTML = '<marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--border-strong)"/></marker>';
+  const byTier = [0, 1, 2].map(t => G.nodes.filter(n => n.tier === t));
+  const at = G.nodes.map(n => { const row = byTier[n.tier]; return { x: 360 * (row.indexOf(n) + 0.5) / row.length, y: TIER_Y[n.tier] }; });
   const eg = mk('g', {}, svg);
-  NODES.forEach(n => n.deps.forEach(d => {
-    const m = NODES[IDX[d]];
-    const x1 = n.x, y1 = n.y + H / 2, x2 = m.x, y2 = m.y - H / 2 - 3;
+  G.DEP.forEach((ds, s) => ds.forEach(d => {
+    const x1 = at[s].x, y1 = at[s].y + H / 2, x2 = at[d].x, y2 = at[d].y - H / 2 - 3;
     mk('path', { d: `M${x1},${y1} C${x1},${(y1 + y2) / 2} ${x2},${(y1 + y2) / 2} ${x2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, eg);
   }));
-  els = NODES.map(n => {
-    const grp = mk('g', { class: 'node', transform: `translate(${n.x},${n.y})`, tabindex: 0, role: 'button', 'aria-label': n.id }, svg);
-    if (n.user) mk('text', { class: 'tagline', y: -H / 2 - 6 }, grp).textContent = 'USERS';
+  els = G.nodes.map(n => {
+    const grp = mk('g', { class: 'node', transform: `translate(${at[n.i].x.toFixed(1)},${at[n.i].y})`, tabindex: 0, role: 'button', 'aria-label': n.id }, svg);
+    if (n.tier === 0) mk('text', { class: 'tagline', y: -H / 2 - 6 }, grp).textContent = 'USERS';
     mk('rect', { class: 'box', x: -W / 2, y: -H / 2, width: W, height: H, rx: 5 }, grp);
     mk('text', { class: 'name', y: 0 }, grp).textContent = n.id;
     const chip = mk('text', { class: 'chip', y: H / 2 + 11 }, grp);
@@ -364,9 +423,8 @@ function build() {
 }
 
 function render() {
-  const unhealthy = UNHEALTHY[S.h];
-  const done = S.h === 0;
-  NODES.forEach(n => {
+  const G = P.G, unhealthy = G.UNHEALTHY[S.h], done = S.h === 0;
+  G.nodes.forEach(n => {
     const e = els[n.i], mon = P.mon >> n.i & 1, bad = unhealthy >> n.i & 1;
     e.grp.classList.toggle('alert', !!(mon && bad));
     e.grp.classList.toggle('ok', !!(mon && !bad));
@@ -377,7 +435,8 @@ function render() {
     e.chip.setAttribute('class', 'chip ' + (k || ''));
   });
   $('eyebrow').textContent = mode === 'daily' ? `daily incident #${dailyNo} · 1 to 3 root causes` : 'practice incident · 1 to 3 root causes';
-  $('s-clock').textContent = `T+${S.clock}m`;
+  $('s-users').textContent = `${usersDown(G, S.h)}/3`;
+  $('s-users').classList.toggle('warn', usersDown(G, S.h) > 0);
   $('s-down').textContent = S.down;
   $('s-down').classList.toggle('warn', S.down > P.par);
   $('s-roots').textContent = S.fixed;
@@ -400,27 +459,23 @@ function render() {
 }
 
 function renderPanel(done) {
-  const p = $('panel');
+  const G = P.G, p = $('panel');
   p.innerHTML = '';
-  const users = usersDown(S.h);
-  if (done) {
-    p.appendChild(Object.assign(document.createElement('h3'), { textContent: 'Resolved' }));
-    p.appendChild(Object.assign(document.createElement('p'), { textContent: `All alerts clear at T+${S.clock}m.` }));
-    return;
-  }
+  const users = usersDown(G, S.h);
+  const add = (tag, text) => p.appendChild(Object.assign(document.createElement(tag), { textContent: text }));
+  if (done) { add('h3', 'Resolved'); add('p', `All alerts clear at T+${S.clock}m.`); return; }
   if (sel === null) {
-    p.appendChild(Object.assign(document.createElement('h3'), { textContent: `${users} of 3 user-facing services down` }));
-    p.appendChild(Object.assign(document.createElement('p'), { textContent: `Every minute costs ${users} user-minute${users === 1 ? '' : 's'} right now. Tap a service to check or fix it.` }));
+    add('h3', `${users} of 3 user-facing services down`);
+    add('p', `Every minute costs ${users} user-minute${users === 1 ? '' : 's'} right now. Tap a service to check or fix it.`);
     return;
   }
-  const n = NODES[sel], mon = P.mon >> sel & 1;
-  p.appendChild(Object.assign(document.createElement('h3'), { textContent: n.id }));
-  const state = !mon ? 'No monitoring.' : (UNHEALTHY[S.h] >> sel & 1) ? 'Alerting.' : 'Healthy.';
+  const n = G.nodes[sel], mon = P.mon >> sel & 1;
+  add('h3', n.id);
+  const state = !mon ? 'No monitoring.' : (G.UNHEALTHY[S.h] >> sel & 1) ? 'Alerting.' : 'Healthy.';
   const k = S.known[sel];
-  p.appendChild(Object.assign(document.createElement('p'), { textContent: `${state}${k ? ` Last result: ${CHIP[k]}.` : ''} ${users} user-facing service${users === 1 ? '' : 's'} down.` }));
+  add('p', `${state}${k ? ` Last result: ${CHIP[k]}.` : ''}`);
   const row = document.createElement('div');
   row.className = 'row';
-  const fixMin = FIX_MIN(sel);
   const mkBtn = (label, a, primary, disabled) => {
     const b = document.createElement('button');
     b.className = 'btn' + (primary ? ' primary' : '');
@@ -429,8 +484,9 @@ function renderPanel(done) {
     b.onclick = () => { apply(a); save(); render(); };
     row.appendChild(b);
   };
+  const fixMin = duration(G, { k: 'fix', s: sel });
   mkBtn(`Check logs · ${CHECK_MIN} min · +${CHECK_MIN * users} user-min`, { k: 'check', s: sel }, false, false);
-  mkBtn(`${sel === PG ? 'Fail over' : 'Fix'} · ${fixMin} min · +${fixMin * users} user-min`, { k: 'fix', s: sel }, true, k === 'fixed');
+  mkBtn(`${fixVerb(G, sel)} · ${fixMin} min · +${fixMin * users} user-min`, { k: 'fix', s: sel }, true, k === 'fixed');
   p.appendChild(row);
 }
 
@@ -448,11 +504,11 @@ function shareText() {
 }
 
 function showResult() {
+  const G = P.G;
   $('r-title').textContent = verdict(S.down - P.par);
-  const roots = NODES.filter(n => P.truth >> n.i & 1).map(n => n.id).join(' and ');
-  $('r-par').textContent = `${P.k} root cause${P.k > 1 ? 's' : ''}: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : 'fix'} ${NODES[a.s].id}`).join(' → ')}.`;
+  const roots = G.nodes.filter(n => P.truth >> n.i & 1).map(n => n.id).join(' and ');
+  $('r-par').textContent = `${P.k} root cause${P.k > 1 ? 's' : ''}: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : fixVerb(G, a.s).toLowerCase()} ${G.nodes[a.s].id}`).join(' → ')}.`;
   $('r-share').value = shareText();
-  $('again').hidden = false;
   $('result').hidden = false;
 }
 
@@ -462,16 +518,16 @@ function save() {
 }
 
 // Incidents are precomputed by scripts/build-puzzles.mjs; the solver is too slow for page load.
-const fromStore = ([k, mon, truth, par, steps]) => ({ k, mon, truth, par, parSteps: steps.split(' ').map(x => ({ k: x[0] === 'c' ? 'check' : 'fix', s: +x.slice(1) })) });
-
 function start(m) {
   mode = m;
   $('tab-daily').setAttribute('aria-pressed', m === 'daily');
   $('tab-practice').setAttribute('aria-pressed', m === 'practice');
   $('practice-ctl').hidden = m !== 'practice';
-  P = m === 'daily' ? fromStore(PUZZLES.daily[(dailyNo - 1 + PUZZLES.daily.length) % PUZZLES.daily.length]) : fromStore(PUZZLES.practice[Math.floor(Math.random() * PUZZLES.practice.length)]);
+  const list = m === 'daily' ? PUZZLES.daily : PUZZLES.practice;
+  P = decode(m === 'daily' ? list[(dailyNo - 1 + list.length) % list.length] : list[Math.floor(Math.random() * list.length)]);
   S = newState();
   sel = null;
+  build();
   if (m === 'daily') {
     try { (JSON.parse(localStorage.getItem(SAVE_KEY) || '[]') || []).forEach(([k, s]) => { if (S.h) apply({ k, s }); }); } catch (e) {}
   }
@@ -488,6 +544,5 @@ $('copy').onclick = e => {
   try { navigator.clipboard.writeText(ta.value).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy result', 1500); }, fallback); } catch (err) { fallback(); }
 };
 
-build();
 start('daily');
 </script>
