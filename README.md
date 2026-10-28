@@ -5,8 +5,12 @@ sources to receivers. Signals that share a network mix additively, so each
 receiver must end up on a network carrying exactly its colour, with no loose
 line ends.
 
-Single self-contained page: `index.html`. Published as a private artifact at
-https://claude.ai/artifact/6NVqBRB73ZTfo4aM9P6zwD.
+Live: <https://hexroute.suncake.xyz>
+
+Single self-contained page: `index.html`. It is also published as a private
+Claude artifact at https://claude.ai/artifact/6NVqBRB73ZTfo4aM9P6zwD, which
+wraps it in a document skeleton; the self-hosted image adds that skeleton from
+`.docker/head.html`. Deployment is described in `deploy/README.md`.
 
 ## How puzzles are made
 
