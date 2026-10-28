@@ -46,5 +46,10 @@ for (const kind of ['daily', 'practice']) {
 }
 const archs = new Set([...PUZZLES.daily, ...PUZZLES.practice].map(r => r[1]));
 console.log(`${n} incidents checked, ${archs.size} distinct architectures, ${PUZZLES.daily.length} daily from ${PUZZLES.epoch}`);
+// The scheduled workflow keeps the daily list well ahead; fail loudly if it stopped.
+const lastDay = new Date(Date.parse(PUZZLES.epoch + 'T00:00:00Z') + (PUZZLES.daily.length - 1) * 864e5);
+const daysLeft = Math.floor((lastDay - Date.now()) / 864e5);
+console.log(`daily incidents run to ${lastDay.toISOString().slice(0, 10)}, ${daysLeft} days ahead`);
+if (daysLeft < 14) failures.push(`daily incidents run out in ${daysLeft} days; run scripts/build-puzzles.mjs extend`);
 if (failures.length) { failures.slice(0, 20).forEach(f => console.error(f)); process.exit(1); }
 console.log('ok');

@@ -524,7 +524,9 @@ function start(m) {
   $('tab-practice').setAttribute('aria-pressed', m === 'practice');
   $('practice-ctl').hidden = m !== 'practice';
   const list = m === 'daily' ? PUZZLES.daily : PUZZLES.practice;
-  P = decode(m === 'daily' ? list[(dailyNo - 1 + list.length) % list.length] : list[Math.floor(Math.random() * list.length)]);
+  // daily[i] is the incident for PUZZLES.epoch + i days; a scheduled workflow keeps the list running ahead.
+  const idx = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.parse(PUZZLES.epoch + 'T00:00:00Z')) / 864e5);
+  P = decode(m === 'daily' ? list[idx] || list[(idx % list.length + list.length) % list.length] : list[Math.floor(Math.random() * list.length)]);
   S = newState();
   sel = null;
   build();

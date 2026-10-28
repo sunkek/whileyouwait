@@ -1,50 +1,92 @@
-// Precomputes incidents into puzzles.js: one daily incident per day for a
-// year from 2026-10-28, and a practice pool. The exact par solver takes up to
-// a few seconds per incident, too slow for page load, so it runs here.
-// Uses the game's own code from index.html (everything above the rendering
-// section). Work is split across child processes.
+// Precomputes incidents into puzzles.js: a rolling window of daily incidents
+// and a practice pool. The exact par solver takes up to a few seconds per
+// incident, too slow for page load, so it runs here. Uses the game's own code
+// from index.html (everything above the rendering section); work is split
+// across child processes.
 //
-//   node scripts/build-puzzles.mjs [days=365] [pool=240] [workers=4]
-import { readFileSync, writeFileSync } from 'node:fs';
+//   node scripts/build-puzzles.mjs extend [ahead=90] [workers=4]
+//     Keeps existing daily incidents from a week ago onward, unchanged, and
+//     appends new ones until `ahead` days past today (UTC). This is what the
+//     scheduled workflow runs. Existing days are never regenerated, so a
+//     generator change cannot alter an incident someone is already playing.
+//
+//   node scripts/build-puzzles.mjs rebuild [ahead=90] [workers=4] [pool=240]
+//     Regenerates everything from a week ago. Use after changing the
+//     generator, the graph rules, or the action costs; it changes today's
+//     incident for anyone who has not finished it.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fork } from 'node:child_process';
 import vm from 'node:vm';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const script = html.split('<script>').at(-1).split('// ---------- rendering')[0];
+const OUT = new URL('../puzzles.js', import.meta.url);
+const KEEP_PAST_DAYS = 7;
+const DAY = 864e5;
+const isoDay = ms => new Date(ms).toISOString().slice(0, 10);
+const dayStart = iso => Date.parse(iso + 'T00:00:00Z');
 
 if (process.argv[2] === '--worker') {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const script = html.split('<script>').at(-1).split('// ---------- rendering')[0];
   const ctx = {};
   vm.createContext(ctx);
   vm.runInContext(script + '\nthis.api = { generate, encode };', ctx);
   process.on('message', jobs => {
-    const out = jobs.map(j => ({ ...j, rec: ctx.api.encode(ctx.api.generate(j.seed, j.k)) }));
-    process.send(out);
+    process.send(jobs.map(j => ({ ...j, rec: ctx.api.encode(ctx.api.generate(j.seed, j.k)) })));
     process.exit(0);
   });
 } else {
-  const [days = 365, pool = 240, workers = 4] = process.argv.slice(2).map(Number);
-  const epoch = Date.UTC(2026, 9, 28);
-  const jobs = [];
-  for (let d = 0; d < days; d++) {
-    const date = new Date(epoch + d * 864e5);
-    const weekend = [0, 6].includes(date.getUTCDay());
-    jobs.push({ kind: 'daily', i: d, seed: `rootcause-daily-${date.toISOString().slice(0, 10)}`, k: weekend ? 3 : 2 });
+  const [mode = 'extend', ahead = 90, workers = 4, pool = 240] = process.argv.slice(2).map((x, i) => i ? Number(x) : x);
+  if (!['extend', 'rebuild'].includes(mode)) throw new Error(`unknown mode ${mode}`);
+
+  let old = null;
+  if (mode === 'extend' && existsSync(OUT)) {
+    const ctx = {};
+    vm.createContext(ctx);
+    vm.runInContext(readFileSync(OUT, 'utf8') + '\nthis.P = PUZZLES;', ctx);
+    old = ctx.P;
   }
-  for (let i = 0; i < pool; i++) jobs.push({ kind: 'practice', i, seed: `rootcause-practice-${i}`, k: i % 3 === 2 ? 3 : 2 });
+
+  const today = dayStart(isoDay(Date.now()));
+  const from = today - KEEP_PAST_DAYS * DAY;
+  const until = today + ahead * DAY;
+
+  // Existing days from `from` onward stay exactly as they are.
+  const kept = new Map();
+  if (old) old.daily.forEach((rec, i) => { const t = dayStart(old.epoch) + i * DAY; if (t >= from) kept.set(t, rec); });
+  const start = kept.size ? Math.min(...kept.keys()) : from;
+
+  const jobs = [];
+  for (let t = start; t <= until; t += DAY) {
+    if (kept.has(t)) continue;
+    const weekend = [0, 6].includes(new Date(t).getUTCDay());
+    jobs.push({ kind: 'daily', t, seed: `rootcause-daily-${isoDay(t)}`, k: weekend ? 3 : 2 });
+  }
+  const practice = old ? old.practice : null;
+  if (!practice) for (let i = 0; i < pool; i++) jobs.push({ kind: 'practice', i, seed: `rootcause-practice-${i}`, k: i % 3 === 2 ? 3 : 2 });
+
   const t0 = Date.now();
-  const chunks = Array.from({ length: workers }, (_, w) => jobs.filter((_, i) => i % workers === w));
-  const results = await Promise.all(chunks.map(chunk => new Promise((resolve, reject) => {
+  const chunks = Array.from({ length: workers }, (_, w) => jobs.filter((_, i) => i % workers === w)).filter(c => c.length);
+  const results = (await Promise.all(chunks.map(chunk => new Promise((resolve, reject) => {
     const child = fork(new URL(import.meta.url).pathname, ['--worker']);
     child.on('message', resolve);
     child.on('error', reject);
     child.on('exit', code => { if (code) reject(new Error('worker exited ' + code)); });
     child.send(chunk);
-  })));
-  const all = results.flat();
-  const pick = kind => all.filter(r => r.kind === kind).sort((a, b) => a.i - b.i).map(r => r.rec);
-  const data = { epoch: '2026-10-28', daily: pick('daily'), practice: pick('practice') };
-  writeFileSync(new URL('../puzzles.js', import.meta.url),
+  })))).flat();
+
+  results.filter(r => r.kind === 'daily').forEach(r => kept.set(r.t, r.rec));
+  const days = [...kept.keys()].sort((a, b) => a - b);
+  days.forEach((t, i) => { if (i && t - days[i - 1] !== DAY) throw new Error(`gap before ${isoDay(t)}`); });
+  const data = {
+    epoch: isoDay(days[0]),
+    daily: days.map(t => kept.get(t)),
+    practice: practice || results.filter(r => r.kind === 'practice').sort((a, b) => a.i - b.i).map(r => r.rec),
+  };
+  writeFileSync(OUT,
     '// Generated by scripts/build-puzzles.mjs. Each incident: [roots, architecture, monitored mask, fault mask, par, par steps].\n' +
+    '// daily[i] is the incident for epoch + i days.\n' +
     'const PUZZLES = ' + JSON.stringify(data) + ';\n');
-  console.log(`${data.daily.length} daily, ${data.practice.length} practice, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  const added = results.filter(r => r.kind === 'daily').length;
+  console.log(`${mode}: daily ${data.epoch} to ${isoDay(days.at(-1))} (${data.daily.length} days, ${added} new), ` +
+    `${data.practice.length} practice, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }

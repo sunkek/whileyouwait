@@ -16,9 +16,10 @@ docker run --rm -p 8080:80 rootcause-web   # http://localhost:8080
 
 - `node scripts/check-puzzles.mjs` must pass (CI enforces it). It validates
   every incident in `puzzles.js` against the rules in `index.html`.
-- After changing the generator, the graph, or the action costs, regenerate
-  with `node scripts/build-puzzles.mjs 365 240 <cores>` (about a minute on
-  twelve cores) and commit `puzzles.js`.
+- Daily incidents are extended automatically every week; you don't need to
+  regenerate them for new dates. After changing the generator, the graph
+  rules, or the action costs, run `node scripts/build-puzzles.mjs rebuild 90
+  <cores>` and commit `puzzles.js`. That replaces today's incident too.
 - Keep everything above the `// ---------- rendering` marker in `index.html`
   free of DOM access; the check runs that part of the script on its own.
 

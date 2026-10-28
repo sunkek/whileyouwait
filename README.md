@@ -46,9 +46,11 @@ where and how it is hosted and deployed.
 - Incidents are rejected unless no fault is certain from the first alerts and
   the optimal strategy reads logs at least twice.
 - The exact solver takes up to a few seconds per incident, so incidents are
-  precomputed into `puzzles.js` by `scripts/build-puzzles.mjs`: a year of
-  daily incidents from 2026-10-28 (#1), then the list repeats, and a practice
-  pool of 240.
+  precomputed into `puzzles.js` by `scripts/build-puzzles.mjs`, with a practice
+  pool of 240. A weekly workflow (`.github/workflows/puzzles.yml`) appends daily
+  incidents so the list always runs 90 days ahead, drops days older than a
+  week, commits, and triggers a deploy. Existing days are never regenerated.
+  Daily #1 is 2026-10-28.
 
 ## Development
 
