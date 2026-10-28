@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # Both workflows pin actions by commit SHA; these PRs move the SHA and keep
+  # the trailing `# vX.Y.Z` comment in step.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /.docker
+    schedule:
+      interval: weekly
