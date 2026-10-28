@@ -86,6 +86,10 @@ select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; 
 .rules { color: var(--muted); font-size: 14px; }
 .rules summary { cursor: pointer; color: var(--fg); font-weight: 500; }
 .rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }
+.example { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; padding: 8px 10px; background: var(--subtle); border-radius: 5px; font-size: 13px; }
+.example .ex { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+.example .chip { min-width: 20px; height: 20px; font-size: 11px; }
+.example .chip:last-of-type { margin-right: 6px; }
 @media (max-width: 340px) { .tests { grid-template-columns: 1fr; } }
 </style>
 
@@ -149,10 +153,18 @@ select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; 
   <details class="rules" open>
     <summary>How it works</summary>
     <ul>
-      <li>CI went red. The suite has eight tests and exactly three hidden order dependencies. Each one is either:</li>
-      <li><b>X pollutes Y</b>: Y fails if X ran anywhere earlier in the same run.</li>
-      <li><b>X sets up Y</b>: Y fails unless X ran earlier in the same run.</li>
-      <li>A test fails if any of its dependencies bite, and passes otherwise. Every run starts from a clean state.</li>
+      <li>CI went red. The suite has eight tests, and every test is fine on its own terms. What breaks them is running order: there are exactly three hidden order dependencies, each of one of two kinds.</li>
+      <li><b>X pollutes Y</b>: X leaves something behind, say rows in a shared table, and Y fails if X ran anywhere earlier in the same run.
+        <div class="example">If A pollutes C:
+          <span class="ex"><span class="chip pass">A</span><span class="chip pass">B</span><span class="chip fail">C</span> C fails, A ran earlier</span>
+          <span class="ex"><span class="chip pass">C</span><span class="chip pass">A</span> C passes, A ran after it</span>
+          <span class="ex"><span class="chip pass">C</span> C passes alone</span></div></li>
+      <li><b>X sets up Y</b>: Y quietly relies on something X creates, say a user account, and fails unless X ran earlier in the same run.
+        <div class="example">If A sets up C:
+          <span class="ex"><span class="chip pass">A</span><span class="chip pass">B</span><span class="chip pass">C</span> C passes, A ran earlier</span>
+          <span class="ex"><span class="chip fail">C</span><span class="chip pass">A</span> C fails, A ran too late</span>
+          <span class="ex"><span class="chip fail">C</span> C fails alone</span></div></li>
+      <li>A test fails if any of its dependencies bite, and passes otherwise. Only the order within one run matters: every run starts from a clean state.</li>
       <li>The first run is CI's: the whole suite in file order, free. After that, queue any tests in any order and run them. A run costs 4 seconds to boot plus each test's duration.</li>
       <li>Name all three dependencies to finish. You get one diagnosis, and nothing moves until you act, so take your time.</li>
       <li>The bot picks whichever run tells it the most per second, one run at a time. It never guesses, but it doesn't plan ahead either.</li>
