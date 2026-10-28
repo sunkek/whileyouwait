@@ -304,6 +304,20 @@ function generate(seed, k) {
   }
   throw new Error('no puzzle for ' + seed);
 }
+// One player action against the real faults (state.h holds the faults not yet
+// fixed). Shared by the page and by scripts/check-puzzles.mjs.
+const newPlay = truth => ({ h: truth, clock: 0, down: 0, known: {}, fixed: 0, wasted: 0, checks: 0 });
+function play(state, a) {
+  const d = duration(a);
+  state.down += d * usersDown(state.h);
+  state.clock += d;
+  let res;
+  if (a.k === 'check') { res = outcome(state.h, 0, a, 0); state.checks++; }
+  else if (state.h >> a.s & 1) { res = 'fixed'; state.h &= ~(1 << a.s); state.fixed++; }
+  else { res = 'nothing'; state.wasted++; }
+  state.known[a.s] = res;
+  return res;
+}
 // ---------- rendering
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -314,23 +328,15 @@ const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag)
 const today = new Date();
 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 28)) / 864e5) + 1;
-const SAVE_KEY = 'rootcause2-' + dateKey;
+const SAVE_KEY = 'rootcause3-' + dateKey;
 const CHIP = { own: 'own errors', upstream: 'upstream', clean: 'clean', fixed: 'fixed', nothing: 'nothing to fix' };
 
 let mode = 'daily', P = null, S = null, sel = null, els = [], edges = [];
 
-function newState() { return { h: P.truth, clock: 0, down: 0, actions: [], log: [], known: {}, fixed: 0, wasted: 0, checks: 0 }; }
+function newState() { return { ...newPlay(P.truth), actions: [], log: [] }; }
 
 function apply(a) {
-  const d = duration(a);
-  S.down += d * usersDown(S.h);
-  S.clock += d;
-  let res;
-  if (a.k === 'check') res = outcome(S.h, a, P.mon).split(':')[0];
-  else if (S.h >> a.s & 1) { res = 'fixed'; S.h &= ~(1 << a.s); S.fixed++; }
-  else { res = 'nothing'; S.wasted++; }
-  if (a.k === 'check') S.checks++;
-  S.known[a.s] = res;
+  const res = play(S, a);
   S.actions.push([a.k, a.s]);
   S.log.push({ t: S.clock, text: `${a.k === 'check' ? 'checked' : a.s === PG ? 'failed over' : 'fixed'} ${NODES[a.s].id}`, res });
 }
