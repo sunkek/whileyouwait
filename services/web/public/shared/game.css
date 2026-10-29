@@ -1,0 +1,88 @@
+/* Shared by every game page: the design tokens and the page chrome. Each game's
+   head.html links it before the game's own <style>, so a game adds its own
+   tokens and board styles there and can override anything here.
+
+   Tokens from the nikita zotov design system: warm stone neutrals, sage brand,
+   amber accent, IBM Plex, small radii. The system defines light only; the dark
+   values are derived from its stone, sage and clay scales.
+
+   Page structure, in order, inside .wrap:
+     a.wyw-home                 back to the catalog
+     header                     .eyebrow#eyebrow and h1, then .tabs (Daily / Practice)
+     .stats                     one .stat per number, any count
+     the board                  game-specific
+     .controls                  the game's buttons, with an optional .note
+     .result#result             h2#r-title, optional .note lines, textarea#r-share, .controls
+     details.rules              summary "How to play", then a ul */
+
+:root {
+  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
+  --fg: #1A1611; --muted: #5A5346; --faint: #7D7464; --ink: #3A342B;
+  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --brand-tint: #E0E9DB;
+  --accent: #E6AC0C; --accent-ink: #956C0A;
+  --bad: #C0492F; --bad-ink: #FFFFFF; --bad-bg: #F7E1DB;
+  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
+  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-md: 5px; --radius-lg: 8px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --faint: #8F877A; --ink: #D8CFC0;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --brand-tint: #31432B;
+  --accent: #E6AC0C; --accent-ink: #EBB528;
+  --bad: #E06A4E; --bad-ink: #1A1611; --bad-bg: #3E2213;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --faint: #8F877A; --ink: #D8CFC0;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --brand-tint: #31432B;
+  --accent: #E6AC0C; --accent-ink: #EBB528;
+  --bad: #E06A4E; --bad-ink: #1A1611; --bad-bg: #3E2213;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+.wyw-home { align-self: flex-start; font: 500 12px var(--font-mono); color: var(--muted); text-decoration: none; }
+.wyw-home:hover { color: var(--fg); text-decoration: underline; }
+
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); min-height: 1.5em; }
+h1 { font-weight: 600; font-size: 28px; line-height: 1.2; letter-spacing: -0.02em; margin: 2px 0 0; }
+.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: var(--radius-md); }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 3px; cursor: pointer; transition: background 120ms var(--ease), color 120ms var(--ease); }
+.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); box-shadow: var(--shadow-sm); }
+
+.stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; border-block: 1px solid var(--line); }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 8px; min-width: 0; }
+.stat b { font: 500 22px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat b.warn { color: var(--bad); }
+.stat small { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--wire); background: var(--tile); color: var(--fg); font: 500 14px var(--font-body); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; transition: background 120ms var(--ease), border-color 120ms var(--ease); }
+.btn:hover { background: var(--empty); }
+.btn:active { transform: translateY(0.5px); }
+.btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+select { font: 500 14px var(--font-body); padding: 7px 8px; border-radius: var(--radius-md); border: 1px solid var(--wire); background: var(--tile); color: var(--fg); }
+.btn:focus-visible, select:focus-visible, .tabs button:focus-visible { outline: none; box-shadow: var(--ring); }
+.note { margin: 0; color: var(--muted); font-size: 13px; }
+
+.card, .result { border: 1px solid var(--line); background: var(--tile); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.result h2 { font-weight: 600; font-size: 18px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.result textarea { font: 13px var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
+
+.rules { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.rules summary { cursor: pointer; color: var(--fg); font-weight: 600; }
+.rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }

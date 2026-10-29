@@ -10,7 +10,7 @@ Live: <https://whileyouwait.suncake.xyz/poise/>, part of the
 
 Single self-contained page: `index.html` holds the page body, and the
 catalog's image adds the document skeleton from `head.html`, which also loads
-the catalog's analytics. Deployment is described in `deploy/README.md` at the
+the catalog's analytics and the shared page styles (`/shared/game.css`). Deployment is described in `deploy/README.md` at the
 repository root.
 
 ## How puzzles are made

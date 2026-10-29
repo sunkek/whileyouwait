@@ -1,92 +1,33 @@
 <title>Flaky: a daily flaky-test deduction puzzle for developers · WhileYouWait</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: one narrow column; status strip, the test list and run queue, the run history as the board, then the diagnosis.
-   Tokens from the nikita zotov design system (light defined there; dark derived from its stone, sage and clay scales). */
-:root {
-  --bg: #FAF8F3; --surface: #FFFFFF; --subtle: #F1ECE3; --border: #E4DCD0; --border-strong: #CFC6B7;
-  --fg: #1A1611; --muted: #5A5346; --faint: #7D7464;
-  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --brand-tint: #E0E9DB;
-  --accent: #E6AC0C; --accent-ink: #956C0A;
-  --down: #C0492F; --down-ink: #FFFFFF; --down-bg: #F7E1DB;
-  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
-  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #1A1611; --surface: #29241D; --subtle: #211D17; --border: #403A30; --border-strong: #5A5346;
-  --fg: #FAF8F3; --muted: #CFC6B7; --faint: #A79E8D;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --brand-tint: #31432B;
-  --accent: #E6AC0C; --accent-ink: #F0C455;
-  --down: #E06A4E; --down-ink: #1A1611; --down-bg: #3E2213;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #1A1611; --surface: #29241D; --subtle: #211D17; --border: #403A30; --border-strong: #5A5346;
-  --fg: #FAF8F3; --muted: #CFC6B7; --faint: #A79E8D;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --brand-tint: #31432B;
-  --accent: #E6AC0C; --accent-ink: #F0C455;
-  --down: #E06A4E; --down-ink: #1A1611; --down-bg: #3E2213;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
-body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-sans); }
-.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 16px; }
-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
-h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0; }
+   Tokens and page chrome come from /shared/game.css. */
 h3 { margin: 0; font: 600 13px var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-.tabs { display: flex; gap: 4px; background: var(--subtle); padding: 3px; border-radius: 5px; }
-.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-sans); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
-.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-block: 1px solid var(--border); padding-block: 8px; }
-.stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.stat b { font: 500 20px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.stat small { font: 500 10px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--faint); }
-.stat b.warn { color: var(--down); }
-.card { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; box-shadow: var(--shadow-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .tests { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.test { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 6px; text-align: left; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); border-radius: 5px; padding: 6px; cursor: pointer; font: 12px var(--font-mono); transition: background 120ms var(--ease); }
-.test:hover { background: var(--subtle); }
+.test { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 6px; text-align: left; border: 1px solid var(--wire); background: var(--tile); color: var(--fg); border-radius: var(--radius-md); padding: 6px; cursor: pointer; font: 12px var(--font-mono); transition: background 120ms var(--ease); }
+.test:hover { background: var(--empty); }
 .test .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .test .dur { color: var(--faint); font-variant-numeric: tabular-nums; }
 .test[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-tint); }
-.letter { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; font: 600 12px var(--font-mono); background: var(--subtle); color: var(--fg); }
+.letter { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; font: 600 12px var(--font-mono); background: var(--empty); color: var(--fg); }
 .test[aria-pressed="true"] .letter { background: var(--brand); color: var(--on-brand); }
 .queue { display: flex; gap: 4px; flex-wrap: wrap; min-height: 26px; align-items: center; }
 .queue .hint { color: var(--faint); font-size: 13px; }
-.chip { display: inline-grid; place-items: center; min-width: 24px; height: 24px; border-radius: 4px; font: 600 12px var(--font-mono); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--fg); box-sizing: border-box; }
+.chip { display: inline-grid; place-items: center; min-width: 24px; height: 24px; border-radius: 4px; font: 600 12px var(--font-mono); border: 1.5px solid var(--wire); background: var(--tile); color: var(--fg); box-sizing: border-box; }
 .chip.pass { border-color: var(--brand); color: var(--brand); }
-.chip.fail { border-color: var(--down); background: var(--down-bg); color: var(--down); }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip.fail { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
 .runs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.runs li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 5px; cursor: pointer; }
-.runs li:hover, .runs li:focus-visible { background: var(--subtle); outline: none; }
+.runs li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: var(--radius-md); cursor: pointer; }
+.runs li:hover, .runs li:focus-visible { background: var(--empty); outline: none; }
 .runs .no { font: 500 12px var(--font-mono); color: var(--faint); font-variant-numeric: tabular-nums; }
 .runs .cost { font: 12px var(--font-mono); color: var(--faint); font-variant-numeric: tabular-nums; }
 .runs .chips { display: flex; gap: 3px; flex-wrap: wrap; }
 .diag { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 6px; }
-select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); min-width: 0; }
-.btn { border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); font: 500 14px var(--font-sans); padding: 8px 14px; border-radius: 5px; cursor: pointer; transition: background 120ms var(--ease); }
-.btn:hover { background: var(--subtle); }
-.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
-.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
-.btn.danger { background: var(--down); border-color: var(--down); color: var(--down-ink); }
-.btn:active { transform: translateY(0.5px); }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn:focus-visible, .tabs button:focus-visible, select:focus-visible, .test:focus-visible { outline: none; box-shadow: var(--ring); }
-.note { margin: 0; color: var(--muted); font-size: 14px; }
-.result h2 { font-weight: 600; font-size: 18px; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
-.result textarea { font: 13px var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 5px; padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
-.rules { color: var(--muted); font-size: 14px; }
-.rules summary { cursor: pointer; color: var(--fg); font-weight: 500; }
-.rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }
-.example { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; padding: 8px 10px; background: var(--subtle); border-radius: 5px; font-size: 13px; }
+.btn.danger { background: var(--bad); border-color: var(--bad); color: var(--bad-ink); }
+select { font-family: var(--font-mono); padding: 7px 6px; min-width: 0; }
+.test:focus-visible { outline: none; box-shadow: var(--ring); }
+.example { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; padding: 8px 10px; background: var(--empty); border-radius: var(--radius-md); font-size: 13px; }
 .example .ex { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
 .example .chip { min-width: 20px; height: 20px; font-size: 11px; }
 .example .chip:last-of-type { margin-right: 6px; }
@@ -117,7 +58,7 @@ select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; 
     <div class="tests" id="tests"></div>
     <h3>Next run</h3>
     <div class="queue" id="queue" aria-live="polite"></div>
-    <div class="row">
+    <div class="controls">
       <button class="btn primary" id="run">Run</button>
       <button class="btn" id="reverse">Reverse</button>
       <button class="btn" id="all">All</button>
@@ -134,7 +75,7 @@ select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; 
   <div class="card" id="diag-card">
     <h3>Diagnosis</h3>
     <div class="diag" id="diag"></div>
-    <div class="row">
+    <div class="controls">
       <button class="btn primary" id="submit" disabled>Submit diagnosis</button>
       <span class="note" id="submit-note">One attempt.</span>
     </div>
@@ -145,14 +86,14 @@ select { font: 500 14px var(--font-mono); padding: 7px 6px; border-radius: 5px; 
     <p class="note" id="r-truth"></p>
     <p class="note" id="r-bot"></p>
     <textarea id="r-share" rows="5" readonly aria-label="Shareable result"></textarea>
-    <div class="row">
+    <div class="controls">
       <button class="btn primary" id="copy">Copy result</button>
       <button class="btn" id="again">Practice suite</button>
     </div>
   </div>
 
   <details class="rules" open>
-    <summary>How it works</summary>
+    <summary>How to play</summary>
     <ul>
       <li>CI went red. The suite has eight tests, and every test is fine on its own terms. What breaks them is running order: there are exactly three hidden order dependencies, each of one of two kinds.</li>
       <li><b>X pollutes Y</b>: X leaves something behind, say rows in a shared table, and Y fails if X ran anywhere earlier in the same run.

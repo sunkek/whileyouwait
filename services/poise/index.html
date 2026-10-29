@@ -1,49 +1,15 @@
 <title>Poise: a daily balance puzzle · WhileYouWait</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: one narrow column; the mobile hangs from a rail across the column, stats above, controls below.
-   Tokens from the nikita zotov design system: warm stone neutrals, sage brand, amber accent, IBM Plex, small radii.
-   Weights are brass discs; a level bar turns sage. */
+   Shared tokens and page chrome come from /shared/game.css. Weights are brass discs; a level bar turns sage. */
 :root {
-  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
-  --fg: #1A1611; --muted: #5A5346; --ink: #3A342B;
-  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --accent-ink: #956C0A;
-  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
-  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
   --disc: #C99A3B; --disc-edge: #8A6416; --disc-text: #2A1E07; --string: #8F877A; --lean: #3A342B;
-  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --radius-md: 5px; --radius-lg: 8px;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; color-scheme: dark } }
+  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; } }
 :root[data-theme="dark"] {
-  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; color-scheme: dark }
-body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; }
-.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 16px; }
-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
-h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0; }
-.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: var(--radius-md); }
-.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
-.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); box-shadow: var(--shadow-sm); }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-block: 1px solid var(--line); }
-.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 8px; }
-.stat b { font: 500 22px var(--font-mono); font-variant-numeric: tabular-nums; }
-.stat small { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; }
 
 .stage { border-top: 3px solid var(--ink); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 .stage svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: manipulation; }
@@ -61,19 +27,8 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0
 .stage .arm { font: 500 10px var(--font-mono); fill: var(--muted); text-anchor: middle; pointer-events: none; }
 .stage.solved .disc { animation: settle 600ms var(--ease) both; }
 @keyframes settle { 40% { fill: var(--brand); } }
+#note { min-height: 1.5em; }
 
-.controls { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { border: 1px solid var(--line); background: var(--tile); color: var(--fg); font: 500 14px var(--font-body); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; }
-.btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
-.btn:disabled { opacity: 0.45; cursor: default; }
-button:focus-visible { outline: none; box-shadow: var(--ring); }
-.note { color: var(--muted); font-size: 13px; min-height: 1.4em; margin: 0; }
-.result { border: 1px solid var(--brand); background: var(--tile); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-.result h2 { font-size: 17px; font-weight: 600; margin: 0; }
-.result textarea { font: 13px var(--font-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px; resize: none; }
-.rules { color: var(--muted); font-size: 14px; line-height: 1.55; }
-.rules summary { cursor: pointer; color: var(--fg); font-weight: 500; }
-.rules ul { margin: 8px 0 0; padding-left: 20px; max-width: 62ch; display: flex; flex-direction: column; gap: 4px; }
 @media (prefers-reduced-motion: reduce) { .stage.solved .disc { animation: none; } }
 </style>
 
@@ -99,6 +54,12 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   <div class="stage" id="stage"><svg id="mobile" role="group" aria-label="The mobile: tap a weight, then another to swap them"></svg></div>
   <p class="note" id="note">Tap a weight, then another to swap them.</p>
 
+  <div class="controls">
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="reset">Start over</button>
+    <button class="btn" id="new" hidden>New mobile</button>
+  </div>
+
   <div class="result" id="result" hidden>
     <h2 id="r-title"></h2>
     <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
@@ -106,12 +67,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
       <button class="btn primary" id="copy">Copy result</button>
       <button class="btn" id="next" hidden>Next mobile</button>
     </div>
-  </div>
-
-  <div class="controls">
-    <button class="btn" id="undo">Undo</button>
-    <button class="btn" id="reset">Start over</button>
-    <button class="btn" id="new" hidden>New mobile</button>
   </div>
 
   <details class="rules" open>

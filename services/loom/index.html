@@ -1,54 +1,20 @@
 <title>Loom: a daily weaving puzzle · WhileYouWait</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: one narrow column; the weaving draft is the board, stats above, controls below.
-   Tokens from the nikita zotov design system: warm stone neutrals, sage brand, amber accent, IBM Plex, small radii.
-   The dyes are game colours: one warp dye per day on a cream weft, warmed toward the palette. */
+   Shared tokens and page chrome come from /shared/game.css. The dyes are game colours:
+   one warp dye per day on a cream weft, warmed toward the palette. */
 :root {
-  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
-  --fg: #1A1611; --muted: #5A5346; --ink: #3A342B; --bad: #C0492F;
-  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --accent-ink: #956C0A;
-  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
-  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
   --weft: #E9DCC3;
   --dye-indigo: #2F4A7A; --dye-madder: #9C3B2A; --dye-weld: #A87B12; --dye-woad: #3F6B6E;
-  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --radius-md: 5px; --radius-lg: 8px;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
   --cell: 18px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0; --bad: #E06A4E;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --weft: #D9C9A8;
-  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; color-scheme: dark } }
+  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; } }
 :root[data-theme="dark"] {
-  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0; --bad: #E06A4E;
-  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
-  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --weft: #D9C9A8;
-  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; color-scheme: dark }
-body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; }
-.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 16px; }
-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
-h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0; }
-.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: var(--radius-md); }
-.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 3px; cursor: pointer; transition: background 120ms var(--ease), color 120ms var(--ease); }
-.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); box-shadow: var(--shadow-sm); }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-block: 4px; border-block: 1px solid var(--line); }
-.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 8px; }
-.stat b { font: 500 22px var(--font-mono); font-variant-numeric: tabular-nums; }
-.stat small { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; }
 
 /* The draft, laid out as weavers write it: threading above the cloth, the
    tie-up in the corner, treadling to the right. Frame 1 is the bottom row. */
@@ -99,21 +65,7 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
 .target[data-dye="woad"] { --dye: var(--dye-woad); }
 .target .w { background: var(--dye); } .target .f { background: var(--weft); }
 .side { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
-.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.btn { border: 1px solid var(--wire); background: var(--tile); color: var(--fg); font: 500 14px var(--font-body); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; transition: background 120ms var(--ease), border-color 120ms var(--ease); }
-.btn:hover { background: var(--empty); }
-.btn:active { transform: translateY(0.5px); }
-.btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
-.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
 .btn[aria-pressed="true"] { border-color: var(--bad); color: var(--bad); }
-.btn:focus-visible, .tabs button:focus-visible { outline: none; box-shadow: var(--ring); }
-.result { border: 1px solid var(--line); background: var(--tile); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-.result h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; margin: 0; font-size: 18px; text-wrap: balance; }
-.result textarea { font: 13px var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
-.rules { color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
-.rules summary { cursor: pointer; color: var(--fg); font-weight: 600; }
-.rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }
-.hint { color: var(--muted); font-size: 0.85rem; }
 </style>
 
 <div class="wrap">
@@ -150,7 +102,7 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
         <button class="btn" id="hint" aria-pressed="false">Give me a tip</button>
         <button class="btn" id="new" hidden>New puzzle</button>
       </div>
-      <span class="hint" id="hint-note">Reset restores the start; taps still count. A tip rings the wrong cells and marks the result as assisted.</span>
+      <span class="note" id="hint-note">Reset restores the start; taps still count. A tip rings the wrong cells and marks the result as assisted.</span>
     </div>
   </div>
 
