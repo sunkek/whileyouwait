@@ -21,6 +21,7 @@ jobs:
       - run: node services/flaky/scripts/check-generator.mjs
       - run: node services/loom/scripts/check-generator.mjs
       - run: node services/poise/scripts/check-generator.mjs
+      - run: node services/runoff/scripts/check-generator.mjs
       - run: node services/web/scripts/check-track.mjs
 
   image:

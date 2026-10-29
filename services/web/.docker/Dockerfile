@@ -10,6 +10,7 @@ COPY root-cause/head.html root-cause/index.html root-cause/puzzles.js /tmp/games
 COPY flaky/head.html flaky/index.html /tmp/games/flaky/
 COPY loom/head.html loom/index.html /tmp/games/loom/
 COPY poise/head.html poise/index.html /tmp/games/poise/
+COPY runoff/head.html runoff/index.html /tmp/games/runoff/
 RUN set -e; cd /tmp/games; for g in *; do \
       mkdir -p "/usr/share/nginx/html/$g"; \
       cat "$g/head.html" "$g/index.html" > "/usr/share/nginx/html/$g/index.html"; \

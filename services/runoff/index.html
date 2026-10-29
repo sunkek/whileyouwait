@@ -1,0 +1,596 @@
+<title>Runoff: a daily water puzzle · WhileYouWait</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column; the hillside is an isometric block of terraces falling toward the river
+   at the front. Shared tokens and page chrome come from /shared/game.css. Ground runs from loam (low)
+   to sand (high); cliff faces darken; water is the only blue. */
+:root {
+  --lo: #9DAE85; --hi: #F2E6C9; --cliff: #3A342B; --water: #3B82B0; --water-edge: #2A6890;
+  --crop: #8A6A2C; --crop-wet: #3F6B34; --house: #FFFFFF; --roof: #A4553B;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --lo: #34402C; --hi: #8E826A; --cliff: #000000; --water: #4F9BD0; --water-edge: #8CC3E8;
+  --crop: #C9A75E; --crop-wet: #A6D08F; --house: #D8CFC0; --roof: #B5654A; } }
+:root[data-theme="dark"] {
+  --lo: #34402C; --hi: #8E826A; --cliff: #000000; --water: #4F9BD0; --water-edge: #8CC3E8;
+  --crop: #C9A75E; --crop-wet: #A6D08F; --house: #D8CFC0; --roof: #B5654A; }
+
+.stage { border-top: 3px solid var(--ink); padding-top: 12px; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.stage svg { display: block; width: 100%; max-width: 520px; margin: 0 auto; height: auto; touch-action: none; cursor: pointer; }
+.h0 { --t: var(--lo); }
+.h1 { --t: color-mix(in oklab, var(--hi) 17%, var(--lo)); }
+.h2 { --t: color-mix(in oklab, var(--hi) 33%, var(--lo)); }
+.h3 { --t: color-mix(in oklab, var(--hi) 50%, var(--lo)); }
+.h4 { --t: color-mix(in oklab, var(--hi) 67%, var(--lo)); }
+.h5 { --t: color-mix(in oklab, var(--hi) 83%, var(--lo)); }
+.h6 { --t: var(--hi); }
+.top { fill: var(--t); stroke: color-mix(in oklab, var(--cliff) 14%, var(--t)); stroke-width: 0.6; }
+.side-r { fill: color-mix(in oklab, var(--cliff) 34%, var(--t)); stroke: color-mix(in oklab, var(--cliff) 40%, var(--t)); stroke-width: 0.6; }
+.side-c { fill: color-mix(in oklab, var(--cliff) 20%, var(--t)); stroke: color-mix(in oklab, var(--cliff) 28%, var(--t)); stroke-width: 0.6; }
+#hill g[data-i] > :not(.top):not(.side-r):not(.side-c) { pointer-events: none; }
+.river { fill: var(--water); }
+.river-label { font: 500 9px var(--font-mono); letter-spacing: 0.3em; fill: var(--bg); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.pool { fill: var(--water); stroke: var(--water-edge); stroke-width: 0.8; stroke-opacity: 0.6; animation: appear 260ms var(--ease) both; }
+.flow { fill: none; stroke: var(--water); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; animation: appear 200ms var(--ease) both; }
+@keyframes appear { from { opacity: 0; } }
+.hnum { font: 600 9px var(--font-mono); fill: var(--cliff); opacity: 0.7; text-anchor: middle; }
+.field line { stroke: var(--crop); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 0.1 6; }
+.field.wet line { stroke: var(--crop-wet); stroke-dasharray: 4 3; }
+.house path { stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
+.house .hf { fill: var(--house); }
+.house .hw { fill: color-mix(in oklab, var(--ink) 18%, var(--house)); }
+.house .hr { fill: var(--roof); }
+.house.wet .hf, .house.wet .hw { fill: var(--bad); }
+.spring ellipse { fill: var(--water); stroke: var(--water-edge); stroke-width: 2; }
+.spring .ring { fill: none; stroke: var(--water); stroke-width: 1.5; opacity: 0.6; }
+.sel { fill: none; stroke: var(--fg); stroke-width: 2.5; stroke-linejoin: round; pointer-events: none; }
+.target { fill: var(--fg); fill-opacity: 0.08; stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.stage.solved .flow, .stage.solved .pool { animation: shine 900ms var(--ease) both; }
+@keyframes shine { 50% { filter: brightness(1.25); } }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 18px; height: 18px; }
+#note { min-height: 1.5em; }
+@media (prefers-reduced-motion: reduce) { .pool, .flow, .stage.solved .flow, .stage.solved .pool { animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1>Runoff</h1>
+    </div>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-goals">0/6</b><small>Goals</small></div>
+    <div class="stat"><b id="s-moves">0</b><small>Shoves</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Par</small></div>
+  </div>
+
+  <div class="stage" id="stage"><svg id="hill" role="group" aria-label="The hillside: drag soil from a square onto a neighbour"></svg></div>
+  <div class="legend">
+    <span><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6" fill="var(--water)" stroke="var(--water-edge)" stroke-width="1.5"/></svg>Spring</span>
+    <span><svg viewBox="0 0 18 18"><g class="field wet"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/></g></svg>Field: water it</span>
+    <span><svg viewBox="0 0 18 18"><g class="house"><path class="hf" d="M3 16 V9 L9 3 L15 9 V16 Z"/></g></svg>House: keep dry</span>
+  </div>
+  <p class="note" id="note"></p>
+
+  <div class="controls">
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="reset">Start over</button>
+    <button class="btn" id="new" hidden>New hillside</button>
+    <button class="btn" id="turn" aria-label="Turn the view a quarter turn">Turn view ⟳</button>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next hillside</button>
+    </div>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Water every field and keep every house dry.</li>
+      <li>Water runs from the spring down to the river. Water takes only the steepest way down: from each square it runs to its lowest neighbour alone, and splits only when two or more tie for lowest. A lower square that isn't the lowest stays dry. In a hollow it pools, rising until it spills over the lowest point of the rim. A pool floods every square it touches whose ground is at or below its surface.</li>
+      <li>Drag soil from a square onto a neighbour, or tap a square and then the neighbour. Each shove moves one unit of soil, so digging a channel raises a bank beside it. The number on a square is its height, from 0 to 6.</li>
+      <li>Fields, houses and the spring can't be dug or built on. Undo takes a shove back; the shove still counts.</li>
+      <li>Par is the fewest shoves that solve the day, found by a search. On the odd day the search gives up and par is how many shoves scrambled the hillside, so you may beat it.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+// ---------- rules ----------
+function rng(str) { // FNV-1a hash of the seed string into mulberry32
+  let seed = [...str].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(R, a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// The hillside: W x H cells, row 0 at the top. Walls on three sides; below the
+// last row runs the river, which takes any water that reaches it.
+const W = 6, H = 8, N = W * H, MAXH = 6, RIVER = -1;
+const PLAIN = 0, FIELD = 1, HOUSE = 2, SPRING = 3;
+const NB = [];
+for (let i = 0; i < N; i++) {
+  const r = Math.floor(i / W), c = i % W, a = [];
+  if (r > 0) a.push(i - W);
+  if (c > 0) a.push(i - 1);
+  if (c < W - 1) a.push(i + 1);
+  if (r < H - 1) a.push(i + W); else a.push(RIVER);
+  NB.push(a);
+}
+const hOf = (h, j) => j === RIVER ? -1 : h[j];
+
+// Where the spring's water goes. Running water steps to its lowest neighbours
+// (every one tied for lowest), if lower than where it stands. Water with no lower
+// neighbour pools: the pool takes in its lowest edge cell over and over, rising
+// to that cell's height, until an edge cell is lower than the surface. Before it
+// spills there, it also takes in every edge cell level with its surface, so a
+// square touching a pool at or below the surface is always under water. Returns, per cell, the step at which it got wet (-1: dry) and
+// the pool surface (-1: no pool), plus the flow segments for drawing.
+function simulate(h, spring) {
+  const step = new Int16Array(N).fill(-1), surface = new Int8Array(N).fill(-1);
+  const flows = [];               // [from, to, step]; to is RIVER for water leaving
+  const queue = [[spring, 0]];
+  for (let qi = 0; qi < queue.length; qi++) {
+    const [x, t] = queue[qi];
+    if (step[x] >= 0) continue;
+    let low = Infinity;
+    for (const j of NB[x]) low = Math.min(low, hOf(h, j));
+    if (low < h[x]) {
+      step[x] = t;
+      for (const j of NB[x]) if (hOf(h, j) === low) {
+        flows.push([x, j, t]);
+        if (j !== RIVER) queue.push([j, t + 1]);
+      }
+      continue;
+    }
+    // pool from x; via[j] is the pool cell that put edge cell j on the edge
+    const inR = new Uint8Array(N + 1), via = new Int16Array(N + 1), R = [x];
+    let edge = [];
+    const touch = c => { for (const j of NB[c]) { const k = j === RIVER ? N : j; if (inR[k] !== 1 && inR[k] !== 2) { inR[k] = 2; via[k] = c; edge.push(j); } } };
+    inR[x] = 1; touch(x);
+    let level = h[x];
+    for (;;) {
+      let low = Infinity;
+      for (const j of edge) low = Math.min(low, hOf(h, j));
+      if (low < level && edge.some(j => hOf(h, j) === level)) {
+        const flush = edge.filter(j => hOf(h, j) === level);
+        edge = edge.filter(j => hOf(h, j) !== level);
+        for (const j of flush) { inR[j] = 1; R.push(j); }
+        for (const j of flush) touch(j);
+        continue;
+      }
+      if (low < level) {
+        for (const c of R) { if (step[c] < 0) step[c] = t; surface[c] = Math.max(surface[c], level); }
+        for (const j of edge) if (hOf(h, j) === low) {
+          flows.push([via[j === RIVER ? N : j], j, t]);
+          if (j !== RIVER) queue.push([j, t + 1]);
+        }
+        break;
+      }
+      // take in every edge cell at the lowest height
+      const taken = edge.filter(j => hOf(h, j) === low);
+      edge = edge.filter(j => hOf(h, j) !== low);
+      for (const j of taken) { inR[j] = 1; R.push(j); }
+      for (const j of taken) touch(j);
+      level = low;
+    }
+  }
+  return { step, surface, flows };
+}
+
+// Each field must get wet; each house must stay dry.
+function unmet(g, h, sim = simulate(h, g.spring)) {
+  let bad = 0;
+  for (const f of g.fields) if (sim.step[f] < 0) bad++;
+  for (const k of g.houses) if (sim.step[k] >= 0) bad++;
+  return bad;
+}
+const locked = g => new Set([g.spring, ...g.fields, ...g.houses]);
+// One move: shove a unit of soil from cell a onto its neighbour b. Every
+// channel dug raises a bank beside it.
+function allMoves(g, h) {
+  const L = locked(g), out = [];
+  for (let a = 0; a < N; a++) if (!L.has(a) && h[a] > 0) for (const b of NB[a]) if (b !== RIVER && !L.has(b) && h[b] < MAXH) out.push([a, b]);
+  return out;
+}
+
+// The move a greedy player makes: the one leaving fewest goals unmet, ties at random.
+// Solved within `budget` moves? Used to throw out days that need no planning.
+function greedySolves(g, R, budget) {
+  const s = g.start.slice();
+  for (let n = 0; n < budget; n++) {
+    let best = Infinity, cand = [];
+    for (const [a, b] of allMoves(g, s)) {
+      s[a]--; s[b]++; const u = unmetFast(g, s); s[a]++; s[b]--;
+      if (u < best) { best = u; cand = [[a, b]]; } else if (u === best) cand.push([a, b]);
+    }
+    const [a, b] = cand[Math.floor(R() * cand.length)]; s[a]--; s[b]++;
+    if (!best) return true;
+  }
+  return false;
+}
+// Fast version of simulate() for the solver: wet squares only, no allocation.
+// Writes 1 into wet[i] for every wet square; same rules as simulate().
+const F_wet = new Uint8Array(N), F_mark = new Int32Array(N + 1), F_queue = new Int16Array(N * 8), F_pool = new Int16Array(N), F_edge = new Int16Array(N * 4 + 8);
+let F_gen = 1;
+function wetSquares(h, spring) {
+  F_wet.fill(0);
+  let qh = 0, qt = 0; F_queue[qt++] = spring;
+  while (qh < qt) {
+    const x = F_queue[qh++];
+    if (F_wet[x]) continue;
+    const nb = NB[x];
+    let low = 99;
+    for (let k = 0; k < nb.length; k++) { const j = nb[k], v = j === RIVER ? -1 : h[j]; if (v < low) low = v; }
+    if (low < h[x]) {
+      F_wet[x] = 1;
+      for (let k = 0; k < nb.length; k++) { const j = nb[k]; if (j !== RIVER && h[j] === low) F_queue[qt++] = j; }
+      continue;
+    }
+    // pool: F_mark == gen + 1 in pool, == gen on edge
+    const gen = (F_gen += 2);
+    let np = 0, ne = 0, level = h[x];
+    F_pool[np++] = x; F_mark[x] = gen + 1;
+    const touch = c => { const nb = NB[c]; for (let k = 0; k < nb.length; k++) { const j = nb[k], m = j === RIVER ? N : j; if (F_mark[m] < gen) { F_mark[m] = gen; F_edge[ne++] = j; } } };
+    touch(x);
+    for (;;) {
+      let low = 99, flush = false;
+      for (let k = 0; k < ne; k++) { const j = F_edge[k], v = j === RIVER ? -1 : h[j]; if (v < low) low = v; if (v === level) flush = true; }
+      const take = low < level ? (flush ? level : null) : low;
+      if (take === null) {
+        for (let k = 0; k < np; k++) F_wet[F_pool[k]] = 1;
+        for (let k = 0; k < ne; k++) { const j = F_edge[k]; if (j !== RIVER && h[j] === low) F_queue[qt++] = j; }
+        break;
+      }
+      // move every edge square at height `take` into the pool, then add its neighbours to the edge
+      let w = 0; const start = np;
+      for (let k = 0; k < ne; k++) { const j = F_edge[k], v = j === RIVER ? -1 : h[j]; if (v === take) { F_pool[np++] = j; F_mark[j] = gen + 1; } else F_edge[w++] = j; }
+      ne = w;
+      for (let k = start; k < np; k++) { const c = F_pool[k], nb = NB[c]; for (let q = 0; q < nb.length; q++) { const j = nb[q], m = j === RIVER ? N : j; if (F_mark[m] < gen) { F_mark[m] = gen; F_edge[ne++] = j; } } }
+      level = take;
+    }
+  }
+  return F_wet;
+}
+
+// unmet() on the fast simulator, for the generator's searches.
+function unmetFast(g, h) {
+  const w = wetSquares(h, g.spring); let bad = 0;
+  for (const f of g.fields) if (!w[f]) bad++;
+  for (const k of g.houses) if (w[k]) bad++;
+  return bad;
+}
+
+// Fewest shoves to meet every goal, by iterative deepening up to `cap`. Only
+// shoves touching the water or a square beside it are tried: in a shortest
+// solution, a shove that touches neither can be dropped without changing the
+// water. Terrains already searched with as much depth left are skipped (shoves
+// mostly commute). Gives up after `budget` positions and returns null.
+const Z = Array.from({ length: N }, (_, i) => Array.from({ length: MAXH + 1 }, (_, v) => (Math.imul(i * 7 + v + 1, 2654435761) ^ Math.imul(i + 31 * v + 17, 40503)) >>> 0));
+function minShoves(g, start, cap, budget = 1e6) {
+  const L = locked(g), h = start.slice(), goalsMet = w => g.fields.every(f => w[f]) && g.houses.every(k => !w[k]);
+  let key = 0, nodes = 0;
+  for (let i = 0; i < N; i++) key = (key ^ Z[i][h[i]]) >>> 0;
+  const near = Array.from({ length: cap + 1 }, () => new Uint8Array(N));
+  for (let d = 0; d <= cap; d++) {
+    const seen = new Map();
+    const dfs = left => {
+      if (++nodes > budget) throw 'budget';
+      const w = wetSquares(h, g.spring);
+      if (goalsMet(w)) return true;
+      if (!left) return false;
+      const k = key * 8 + left;
+      if (seen.has(key) && seen.get(key) >= left) return false;
+      seen.set(key, left);
+      const nr = near[left]; nr.fill(0);
+      for (let i = 0; i < N; i++) if (w[i]) { nr[i] = 1; for (const j of NB[i]) if (j !== RIVER) nr[j] = 1; }
+      for (let a = 0; a < N; a++) {
+        if (L.has(a) || h[a] === 0) continue;
+        for (const b of NB[a]) {
+          if (b === RIVER || L.has(b) || h[b] === MAXH || !(nr[a] || nr[b])) continue;
+          const ka = key; key = (key ^ Z[a][h[a]] ^ Z[a][h[a] - 1] ^ Z[b][h[b]] ^ Z[b][h[b] + 1]) >>> 0;
+          h[a]--; h[b]++;
+          const ok = dfs(left - 1);
+          h[a]++; h[b]--; key = ka;
+          if (ok) return true;
+        }
+      }
+      return false;
+    };
+    try { if (dfs(d)) return d; } catch (e) { if (e === 'budget') return null; throw e; }
+  }
+  return null;
+}
+
+// Day's hillside. A slope from the top down to the river, with noise and a few
+// mounds; the spring sits on the top row. The solved terrain decides the goals:
+// fields along the water, houses on dry ground beside it. The start undoes it with
+// 5-7 random shoves near the water; it must break at least three goals, beat a
+// greedy player, and need at least three shoves. Par is the fewest shoves, found
+// by search; if the search runs out of budget, par is the scramble's length.
+function generate(seed) {
+  const R = rng(seed);
+  for (let attempt = 0; ; attempt++) {
+    const h = new Array(N);
+    const bumps = Array.from({ length: 3 }, () => [R() * W, R() * H, (R() < 0.5 ? -1 : 1) * (1 + R())]);
+    for (let i = 0; i < N; i++) {
+      const r = Math.floor(i / W), c = i % W;
+      let v = 4.5 * (H - 1 - r) / (H - 1) + (R() - 0.5) * 1.6;
+      for (const [bx, by, a] of bumps) v += a * Math.exp(-((c - bx) ** 2 + (r - by) ** 2) / 2.5);
+      h[i] = Math.max(0, Math.min(MAXH - 1, Math.round(v)));
+    }
+    const spring = Math.floor(R() * W);
+    h[spring] = MAXH;
+    const sim = simulate(h, spring);
+    const near = i => NB[i].some(j => j !== RIVER && sim.step[j] >= 0);
+    const wet = [...Array(N).keys()].filter(i => sim.step[i] > 0);
+    const dry = [...Array(N).keys()].filter(i => sim.step[i] < 0 && near(i));
+    if (wet.length < 6 || dry.length < 4) continue;
+    const g = { seed, spring, fields: shuffle(R, wet).slice(0, 3), houses: shuffle(R, dry).slice(0, 3) };
+    g.solution = h.slice();
+    const scramble = 5 + Math.floor(R() * 3);
+    let start = null, par = scramble, exact = false;
+    for (let k = 0; k < 30 && !start; k++) {
+      const s = h.slice();
+      for (let n = 0; n < scramble; n++) {
+        const ms = allMoves(g, s).filter(([a, b]) => sim.step[a] >= 0 || near(a) || sim.step[b] >= 0 || near(b));
+        const [a, b] = ms[Math.floor(R() * ms.length)]; s[a]--; s[b]++;
+      }
+      g.start = s;
+      if (unmet(g, s) < 3) continue;
+      if ([0, 1, 2].some(() => greedySolves(g, R, scramble + 3))) continue;
+      const fewest = minShoves(g, s, scramble - 1);
+      if (fewest !== null && fewest < 3) continue;
+      par = fewest === null ? scramble : fewest;
+      exact = fewest !== null;
+      start = s;
+    }
+    if (!start) continue;
+    return Object.assign(g, { start, par, exact, attempts: attempt + 1 });
+  }
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+// Isometric view. Grid points are (column, row, height); the view turns the grid by a
+// quarter `rot` times, then view u runs down-right and view v down-left. Faces toward
+// +u or +v are the visible sides. Start: the hill falls toward the river at front-left.
+const TW = 60, TH = 30, HU = 7, FLOOR = -1.6, STEP_MS = 70;
+let mode = 'daily', game = null, sel = null, drag = null, sim = null, rot = 0;
+try { rot = (+localStorage.getItem('runoff-rot') || 0) % 4; } catch (e) {}
+const V = (x, y) => [[x, y], [H - y, x], [W - x, H - y], [y, W - x]][rot];
+const PV = (u, v, z) => [(u - v) * TW / 2, (u + v) * TH / 2 - z * HU];
+const P = (x, y, z) => PV(...V(x, y), z);
+const pts = (...ps) => ps.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+const rc = i => [i % W, Math.floor(i / W)];
+const depth = (x, y) => { const [u, v] = V(x, y); return u + v; };
+const topFace = (i, z) => { const [c, r] = rc(i); return pts(P(c, r, z), P(c + 1, r, z), P(c + 1, r + 1, z), P(c, r + 1, z)); };
+// The four sides of a cell: outward grid direction, the two corners, the neighbour (null at the walls).
+const SIDES = [
+  [0, 1, (c, r) => [[c, r + 1], [c + 1, r + 1]], (i, c, r) => r < H - 1 ? i + W : null],
+  [1, 0, (c, r) => [[c + 1, r], [c + 1, r + 1]], (i, c, r) => c < W - 1 ? i + 1 : null],
+  [0, -1, (c, r) => [[c, r], [c + 1, r]], (i, c, r) => r > 0 ? i - W : null],
+  [-1, 0, (c, r) => [[c, r], [c, r + 1]], (i, c, r) => c > 0 ? i - 1 : null],
+];
+// a grid direction turned into the view: [du, dv]
+const turn = (dx, dy) => { let a = [dx, dy]; for (let k = 0; k < rot; k++) a = [-a[1], a[0]]; return a; };
+// the midpoint of the side of cell i that faces neighbour j, at height z
+function edgeAt(i, j, z) {
+  const [c, r] = rc(i);
+  if (j === RIVER || j === i + W) return P(c + 0.5, r + 1, z);
+  if (j === i - W) return P(c + 0.5, r, z);
+  return j === i + 1 ? P(c + 1, r + 0.5, z) : P(c, r + 0.5, z);
+}
+const centre = i => [rc(i)[0] + 0.5, rc(i)[1] + 0.5];
+const inFront = (i, j) => j === RIVER ? turn(0, 1).some(d => d > 0) : depth(...centre(j)) > depth(...centre(i));
+
+// Redrawn whole after every shove; water that was not there before fades in in the
+// order it arrives, the rest appears at once.
+function draw(animate) {
+  const h = game.h, prev = sim, next = simulate(h, game.spring);
+  let base = Infinity;
+  for (let i = 0; i < N; i++) if (next.step[i] >= 0 && !(prev && prev.step[i] >= 0)) base = Math.min(base, next.step[i]);
+  const fade = (t, wasWet) => animate && !wasWet && t >= base ? ` style="animation-delay:${(t - base) * STEP_MS}ms"` : ' style="animation:none"';
+  const out = [], byCell = Array.from({ length: N }, () => ({ out: [], in: [] }));
+  for (const [a, b, t] of next.flows) {
+    const wasWet = prev && prev.step[a] >= 0 && (b === RIVER || prev.step[b] >= 0);
+    const za = Math.max(h[a], next.surface[a]), zb = b === RIVER ? -1 : Math.max(h[b], next.surface[b]);
+    const from = P(...centre(a), za);
+    if (inFront(a, b)) {
+      const end = b === RIVER ? P(rc(a)[0] + 0.5, H + 0.35, -1) : edgeAt(a, b, zb);
+      byCell[a].out.push(`<polyline class="flow"${fade(t, wasWet)} points="${pts(from, edgeAt(a, b, za), end)}"/>`);
+    } else byCell[a].out.push(`<polyline class="flow"${fade(t, wasWet)} points="${pts(from, edgeAt(a, b, za))}"/>`);
+    if (b !== RIVER) byCell[b].in.push(`<polyline class="flow"${fade(t + 1, wasWet)} points="${pts(edgeAt(b, a, zb), P(...centre(b), zb))}"/>`);
+  }
+  // the river along the bottom row's side; drawn first when the view puts it at the back
+  const [ax, ay] = P(0, H + 0.45, -1), [bx, by] = P(W, H + 0.45, -1), [lx, ly] = P(W / 2, H + 0.45, -1);
+  let ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+  const river = `<polygon class="river" points="${pts(P(0, H, -1), P(W, H, -1), P(W, H + 0.9, -1), P(0, H + 0.9, -1))}"/><text class="river-label" x="${lx}" y="${ly}" transform="rotate(${ang.toFixed(2)} ${lx} ${ly})">RIVER</text>`;
+  const riverFront = inFront(0, RIVER);
+  if (!riverFront) out.push(river);
+  // back to front: a cell can only hide cells nearer the back
+  const order = [...Array(N).keys()].sort((a, b) => depth(...centre(a)) - depth(...centre(b)));
+  for (const i of order) {
+    const [c, r] = rc(i), z = h[i], wet = next.step[i] >= 0, wasWet = prev && prev.step[i] >= 0;
+    out.push(`<g data-i="${i}">`);
+    for (const [dx, dy, corners, nb] of SIDES) {
+      const [du, dv] = turn(dx, dy); if (du <= 0 && dv <= 0) continue;
+      const j = nb(i, c, r), zb = j === null ? FLOOR : Math.min(z, h[j]);
+      if (zb >= z) continue;
+      const [p, q] = corners(c, r);
+      out.push(`<polygon class="${dv > 0 ? 'side-r' : 'side-c'} h${z}" points="${pts(P(...p, z), P(...q, z), P(...q, zb), P(...p, zb))}"/>`);
+    }
+    out.push(`<polygon class="top h${z}" points="${topFace(i, z)}"/>`);
+    if (i === game.spring) {
+      const [x, y] = P(...centre(i), z);
+      out.push(`<g class="spring"><ellipse class="ring" cx="${x}" cy="${y}" rx="17" ry="8.5"/><ellipse cx="${x}" cy="${y}" rx="10" ry="5"/></g>`);
+    } else if (game.fields.includes(i)) {
+      out.push(`<g class="field${wet ? ' wet' : ''}">${[0.22, 0.5, 0.78].map(k => `<line ${(([x1, y1], [x2, y2]) => `x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"`)(P(c + 0.18, r + k, z), P(c + 0.82, r + k, z))}/>`).join('')}</g>`);
+    }
+    if (next.surface[i] >= 0) out.push(`<polygon class="pool"${fade(next.step[i], wasWet)} fill-opacity="${Math.min(0.85, 0.5 + 0.12 * (next.surface[i] - z))}" points="${topFace(i, next.surface[i])}"/>`);
+    out.push(...byCell[i].in, ...byCell[i].out);
+    if (game.houses.includes(i)) {
+      const [x, y] = P(...centre(i), z);
+      out.push(`<g class="house${wet ? ' wet' : ''}"><path class="hw" d="M${x - 11} ${y + 3} V${y - 9} L${x} ${y - 3} V${y + 9} Z"/><path class="hf" d="M${x} ${y - 3} L${x + 11} ${y - 9} V${y + 3} L${x} ${y + 9} Z"/><path class="hr" d="M${x - 11} ${y - 9} L${x - 1} ${y - 22} L${x + 11} ${y - 9} L${x} ${y - 3} Z"/></g>`);
+    }
+    // the height sits toward the back corner of the top face, clear of the icons
+    const [uc, vc] = V(...centre(i)), [nx, ny] = PV(uc - 0.36, vc - 0.36, Math.max(z, next.surface[i]));
+    out.push(`<text class="hnum" x="${nx.toFixed(1)}" y="${(ny + 3).toFixed(1)}">${z}</text></g>`);
+  }
+  if (riverFront) out.push(river);
+  out.push('<g id="marks"></g>');
+  // fit the box around the grid and river from the floor to above the highest roof
+  const xs = [], ys = [];
+  for (const [x, y] of [[0, 0], [W, 0], [W, H + 0.9], [0, H + 0.9]]) for (const z of [FLOOR, MAXH + 3.5]) { const [sx, sy] = P(x, y, z); xs.push(sx); ys.push(sy); }
+  const x0 = Math.min(...xs) - 8, y0 = Math.min(...ys) - 4;
+  $('hill').setAttribute('viewBox', `${x0.toFixed(1)} ${y0.toFixed(1)} ${(Math.max(...xs) + 8 - x0).toFixed(1)} ${(Math.max(...ys) + 8 - y0).toFixed(1)}`);
+  $('hill').innerHTML = out.join('');
+  sim = next;
+  marks();
+}
+
+// The picked square, and a dashed outline on each neighbour it can shove onto.
+function marks() {
+  const out = [];
+  if (sel !== null) {
+    out.push(`<polygon class="sel" points="${topFace(sel, game.h[sel])}"/>`);
+    for (const [a, b] of allMoves(game, game.h)) if (a === sel) out.push(`<polygon class="target" points="${topFace(b, game.h[b])}"/>`);
+  }
+  $('marks').innerHTML = out.join('');
+}
+
+function render() {
+  const met = 6 - unmet(game, game.h, sim);
+  $('s-goals').textContent = `${met}/6`; $('s-moves').textContent = game.moves; $('s-par').textContent = game.par;
+  $('undo').disabled = !game.history.length || game.solved; $('reset').disabled = game.solved || game.h.every((v, i) => v === game.start[i]);
+  $('stage').classList.toggle('solved', game.solved);
+  $('result').hidden = !game.solved;
+  if (game.solved) {
+    const d = game.moves - game.par;
+    $('r-title').textContent = d < 0 ? `Done in ${game.moves}, under par. You found a shorter way than the search.` : d === 0 ? 'Done in par.' : `Done, ${fmtScore(d)} over par.`;
+    $('r-share').value = shareText();
+    $('next').hidden = mode !== 'practice';
+    $('note').textContent = '';
+  }
+}
+
+const NOTE = 'Drag soil onto a neighbouring square, or tap a square, then a neighbour.';
+function shove(a, b) {
+  if (!allMoves(game, game.h).some(([x, y]) => x === a && y === b)) return false;
+  game.history.push(game.h.slice());
+  game.h[a]--; game.h[b]++; game.moves++;
+  draw(true);
+  game.solved = unmet(game, game.h, sim) === 0;
+  save(); render();
+  return true;
+}
+
+function cellAt(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY), g = el && el.closest('#hill [data-i]');
+  return g ? +g.dataset.i : null;
+}
+const isLocked = i => locked(game).has(i);
+$('hill').addEventListener('pointerdown', e => {
+  if (!game || game.solved) return;
+  const i = cellAt(e); if (i === null) { sel = null; marks(); return; }
+  drag = { from: i, moved: false };
+  $('hill').setPointerCapture(e.pointerId);
+});
+$('hill').addEventListener('pointermove', e => {
+  if (!drag || drag.moved) return;
+  const i = cellAt(e);
+  if (i === null || i === drag.from || !NB[drag.from].includes(i)) return;
+  drag.moved = true;
+  if (isLocked(drag.from) || isLocked(i)) { $('note').textContent = "Fields, houses and the spring stay put."; return; }
+  if (shove(drag.from, i)) { sel = null; marks(); $('note').textContent = NOTE; }
+  else $('note').textContent = game.h[drag.from] === 0 ? 'That square is down to bedrock.' : 'That square is as high as it goes.';
+});
+$('hill').addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.moved || game.solved) return;
+  const i = cellAt(e); if (i !== d.from) return;
+  if (sel !== null && NB[sel].includes(i)) {
+    if (isLocked(i)) $('note').textContent = "Fields, houses and the spring stay put.";
+    else if (!shove(sel, i)) $('note').textContent = 'That square is as high as it goes.';
+    else $('note').textContent = NOTE;
+    sel = null;
+  } else if (isLocked(i)) { sel = null; $('note').textContent = "Fields, houses and the spring stay put."; }
+  else if (sel === i) { sel = null; $('note').textContent = NOTE; }
+  else if (game.h[i] === 0) { sel = null; $('note').textContent = 'That square is down to bedrock.'; }
+  else { sel = i; $('note').textContent = 'Tap a neighbour to shove one unit of soil onto it.'; }
+  marks();
+});
+
+// ---------- modes, persistence, sharing ----------
+const today = new Date();
+const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1;
+const SAVE_KEY = 'runoff1-' + dateKey;
+
+function save() {
+  if (mode !== 'daily') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ h: game.h, moves: game.moves, solved: game.solved })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!s || !Array.isArray(s.h) || s.h.length !== N || s.h.reduce((a, b) => a + b) !== game.start.reduce((a, b) => a + b)) return;
+    Object.assign(game, { h: s.h, moves: s.moves, solved: s.solved });
+  } catch (e) {}
+}
+
+const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
+function shareText() {
+  const head = mode === 'daily' ? `Runoff #${dailyNo}` : 'Runoff practice';
+  return `${head} · ${fmtScore(game.moves - game.par)}\n${game.moves} shoves · par ${game.par}\n${location.origin}/runoff/`;
+}
+
+function start(newMode) {
+  mode = newMode;
+  $('tab-daily').setAttribute('aria-pressed', mode === 'daily');
+  $('tab-practice').setAttribute('aria-pressed', mode === 'practice');
+  $('new').hidden = mode !== 'practice';
+  $('note').textContent = 'Shaping the hillside…';
+  // let the note paint before the generator runs
+  setTimeout(() => {
+    const seed = mode === 'daily' ? 'runoff-daily-' + dateKey : 'runoff-practice-' + Math.random();
+    game = Object.assign(generate(seed), { moves: 0, solved: false, history: [] });
+    game.h = game.start.slice();
+    if (mode === 'daily') restore();
+    $('eyebrow').textContent = mode === 'daily' ? `daily hillside #${dailyNo}` : 'practice hillside';
+    sel = null; sim = null; $('note').textContent = NOTE;
+    draw(false); render();
+  }, 30);
+}
+
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('undo').onclick = () => { const h = game.history.pop(); if (!h) return; game.h = h; sel = null; save(); draw(true); render(); };
+$('reset').onclick = () => { game.history.push(game.h.slice()); game.h = game.start.slice(); sel = null; save(); draw(true); render(); };
+$('new').onclick = () => start('practice');
+$('turn').onclick = () => { rot = (rot + 1) % 4; try { localStorage.setItem('runoff-rot', rot); } catch (e) {} if (game) draw(false); };
+$('next').onclick = () => start('practice');
+$('copy').onclick = e => {
+  const ta = $('r-share'), btn = e.currentTarget;
+  const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Selected. Copy it manually'; };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy result', 1500); }, fallback);
+  } catch (err) { fallback(); }
+};
+start('daily');
+</script>

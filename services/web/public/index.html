@@ -107,7 +107,27 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 @keyframes po-tilt { 0%, 30% { transform: rotate(8deg); stroke: var(--fg); } 38% { transform: rotate(-3deg); stroke: var(--fg); } 46%, 86% { transform: rotate(0deg); stroke: var(--brand); } 96%, 100% { transform: rotate(8deg); stroke: var(--fg); } }
 @keyframes po-dl { 0%, 30% { transform: translateY(-5px); } 38% { transform: translateY(1.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-5px); } }
 @keyframes po-dr { 0%, 30% { transform: translateY(2.5px); } 38% { transform: translateY(-0.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(2.5px); } }
-@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } .po .beam { stroke: var(--brand); } }
+/* Runoff preview: a bank of soil blocks the stream to the field, so it runs to the house;
+   the bank is shoved across and the water turns to the field. Resting frame: the solved one. */
+.ro { --rw: #3B82B0; }
+.ro .top { fill: color-mix(in srgb, var(--brand) 30%, var(--tile)); stroke: color-mix(in srgb, var(--brand) 50%, var(--tile)); stroke-width: 0.8; }
+.ro .sl { fill: color-mix(in srgb, var(--brand) 75%, var(--fg)); }
+.ro .sr { fill: color-mix(in srgb, var(--brand) 60%, var(--tile)); }
+.ro .bank .top { fill: color-mix(in srgb, var(--accent-ink) 30%, var(--tile)); stroke: var(--accent-ink); }
+.ro .bank .sl { fill: color-mix(in srgb, var(--accent-ink) 75%, var(--fg)); } .ro .bank .sr { fill: var(--accent-ink); }
+.ro .spring { fill: var(--rw); }
+.ro .run { fill: none; stroke: var(--rw); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.ro .crop { stroke: var(--brand); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 3 2.5; }
+.ro .hs { fill: var(--tile); stroke: var(--fg); stroke-width: 1; } .ro .roof { fill: var(--bad); stroke: var(--fg); stroke-width: 1; }
+.ro .ra { opacity: 0; animation: ro-a 6s infinite; } .ro .rb { animation: ro-b 6s infinite; }
+.ro .bank { animation: ro-bank 6s infinite; }
+.ro .hs { animation: ro-house 6s infinite; } .ro .crop { animation: ro-crop 6s infinite; }
+@keyframes ro-a { 0%, 38% { opacity: 1; } 44%, 92% { opacity: 0; } 98%, 100% { opacity: 1; } }
+@keyframes ro-b { 0%, 46% { opacity: 0; } 52%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+@keyframes ro-bank { 0%, 30% { transform: translate(32px, 0); } 42%, 90% { transform: translate(0, 0); } 98%, 100% { transform: translate(32px, 0); } }
+@keyframes ro-house { 0%, 40% { fill: var(--bad); } 46%, 92% { fill: var(--tile); } 98%, 100% { fill: var(--bad); } }
+@keyframes ro-crop { 0%, 50% { stroke: var(--accent-ink); } 56%, 90% { stroke: var(--brand); } 96%, 100% { stroke: var(--accent-ink); } }
+@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } .po .beam { stroke: var(--brand); } .ro .ra { opacity: 0; } }
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -128,6 +148,22 @@ footer a { color: inherit; }
   </header>
 
   <ul class="games">
+    <li><a class="game" href="/runoff/" data-save="runoff1-">
+      <div class="game-body">
+        <div class="game-top"><h2>Runoff</h2><span class="tag">Water</span></div>
+        <p>Shove soil around a hillside so the spring waters every field and keeps every house dry. One shove can send the whole stream another way.</p>
+      </div>
+      <svg class="preview ro" viewBox="0 0 120 80" aria-hidden="true">
+        <polygon class="sl" points="6,34 60,61 60,71 6,44"/><polygon class="sr" points="60,61 114,34 114,44 60,71"/>
+        <polygon class="top" points="60,7 114,34 60,61 6,34"/>
+        <polyline class="run ra" points="60,16 44,26 26,40"/>
+        <polyline class="run rb" points="60,16 76,26 94,40"/>
+        <ellipse class="spring" cx="60" cy="16" rx="6" ry="3"/>
+        <g class="crop-field"><line class="crop" x1="86" y1="44" x2="100" y2="37"/><line class="crop" x1="90" y1="47" x2="104" y2="40"/></g>
+        <g><rect class="hs" x="19" y="38" width="12" height="9"/><polygon class="roof" points="17,39 25,31 33,39"/></g>
+        <g class="bank"><polygon class="sl" points="36,26 44,30 44,35 36,31"/><polygon class="sr" points="44,30 52,26 52,31 44,35"/><polygon class="top" points="44,22 52,26 44,30 36,26"/></g>
+      </svg>
+    </a></li>
     <li><a class="game" href="/poise/" data-save="poise1-">
       <div class="game-body">
         <div class="game-top"><h2>Poise</h2><span class="tag">Balance</span></div>

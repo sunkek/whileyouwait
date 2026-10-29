@@ -6,6 +6,7 @@ Live: <https://whileyouwait.suncake.xyz>
 
 | Game | Path | What it is |
 |---|---|---|
+| [Runoff](services/runoff/README.md) | `/runoff/` | Water puzzle: shove soil so the spring waters every field and keeps every house dry |
 | [Poise](services/poise/README.md) | `/poise/` | Balance puzzle: swap weights on a hanging mobile until every bar hangs level |
 | [Loom](services/loom/README.md) | `/loom/` | Weaving puzzle: set threads and treadles so the cloth weaves the day's pattern |
 | [Root Cause](services/root-cause/README.md) | `/root-cause/` | Incident puzzle: find the broken services behind cascading alerts |
@@ -56,6 +57,7 @@ node services/root-cause/scripts/check-puzzles.mjs
 node services/flaky/scripts/check-generator.mjs
 node services/loom/scripts/check-generator.mjs
 node services/poise/scripts/check-generator.mjs
+node services/runoff/scripts/check-generator.mjs
 node services/web/scripts/check-track.mjs
 ```
 

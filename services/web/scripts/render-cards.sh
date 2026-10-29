@@ -24,6 +24,8 @@ card() { # card <name> <eyebrow> <title> <text>
 
 card catalog "Daily puzzles for developers" "WhileYouWait" \
   "Deduction puzzles for while the build runs. A new one of each every day, and no timers."
+card runoff "Daily water puzzle" "Runoff" \
+  "Shove soil around a hillside so the spring waters every field and keeps every house dry."
 card poise "Daily balance puzzle" "Poise" \
   "Swap the weights on a hanging mobile until every bar hangs level."
 card loom "Daily weaving puzzle" "Loom" \
