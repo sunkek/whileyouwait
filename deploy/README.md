@@ -46,6 +46,12 @@ ssh -N -L 3901:127.0.0.1:3901 sunn-agorabot
 # then open http://localhost:3901
 ```
 
+sshd on the host disables TCP forwarding globally; a `Match User deploy` block
+at the end of `/etc/ssh/sshd_config` allows local forwarding to
+`127.0.0.1:3901` only. CI keys cannot use it: their `restrict` option turns
+forwarding off per key. Without that block the tunnel fails with
+"administratively prohibited".
+
 The `visit` event carries `game`, `prior` and `gap` (see `CONTEXT.md`). Day-7
 returns for a game: Events → `visit`, filter `game`, and look at the share
 with `gap` ≥ 7 and `prior` > 0.
