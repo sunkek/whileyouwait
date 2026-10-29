@@ -63,7 +63,13 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
 .treadling { grid-template-columns: repeat(4, var(--cell)); grid-template-rows: repeat(16, var(--cell)); }
 .cell { box-sizing: border-box; border: 1px solid var(--line); background: var(--tile); }
 .threading .cell, .treadling .cell { cursor: pointer; transition: background 120ms var(--ease); }
-.threading .cell.hover, .treadling .cell.hover { background: var(--empty); }
+/* Highlight: the pass or thread under the pointer (or last tapped), the part of
+   the tie-up that applies to it, and the squares that decide what shows. */
+.draft .cell.hl { background: color-mix(in srgb, var(--brand) 16%, var(--tile)); }
+.draft .cell.on.lift { background: var(--brand); border-color: var(--brand); }
+.cloth { position: relative; }
+/* Positioned over the cloth, outside the grid flow, so the cells never reflow around it. */
+.band { position: absolute; box-sizing: border-box; pointer-events: none; z-index: 2; border: 2px solid var(--brand); border-radius: 2px; }
 .threading .cell.on, .treadling .cell.on { background: var(--ink); border-color: var(--ink); }
 .tieup .cell.on { background: var(--muted); border-color: var(--muted); }
 /* Woven look: each cell is the top thread's segment, a little narrower than the
@@ -164,7 +170,8 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
       <li>Each of the 16 vertical threads hangs on one of 4 frames: its square in the threading above the cloth. Tap a column there to move the thread to the next frame.</li>
       <li>Each of the 16 passes presses one of 4 treadles: its square in the treadling on the right. Tap a row there to move the pass to the next treadle.</li>
       <li>The tie-up in the corner says which frames each treadle lifts: a dark square joins a treadle (its column) to a frame (its row).</li>
-      <li>Where a pass lifts a thread's frame, the thread shows. Threads whose target columns look the same belong on the same frame.</li>
+      <li>Where a pass lifts a thread's frame, the thread shows. Hover or tap a pass to see its treadle's column in the tie-up and, in green, the threads that show on it; a thread shows the passes it appears on.</li>
+      <li>Threads whose target columns look the same belong on the same frame.</li>
       <li>Par is the taps that undo the day's scramble. A tap only steps forward, so there is no undo.</li>
     </ul>
   </details>
@@ -226,7 +233,7 @@ function generate(seed) {
 
 // ---------- rendering ----------
 const $ = id => document.getElementById(id);
-let game, mode = 'daily', thr, tie, clo, tre;
+let game, mode = 'daily', thr, tie, clo, tre, band, focus = null;
 
 function grid(el, n) {
   el.innerHTML = '';
@@ -242,22 +249,48 @@ function build() {
   // Row 0 of the threading and tie-up is the top, which is frame 4.
   thr.forEach((d, i) => {
     const c = i % N;
-    d.onclick = () => tap('t', c);
-    d.onmouseenter = () => thr.forEach((e, j) => e.classList.toggle('hover', j % N === c));
-    if (i < N) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Thread ${c + 1}`); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('t', c); } }; }
+    d.onclick = () => { focus = { kind: 't', i: c }; tap('t', c); };
+    d.onpointerenter = e => { if (e.pointerType === 'mouse') setFocus({ kind: 't', i: c }); };
+    if (i < N) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Thread ${c + 1}`); d.onfocus = () => setFocus({ kind: 't', i: c }); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('t', c); } }; }
   });
   tre.forEach((d, i) => {
     const r = Math.floor(i / S);
-    d.onclick = () => tap('u', r);
-    d.onmouseenter = () => tre.forEach((e, j) => e.classList.toggle('hover', Math.floor(j / S) === r));
-    if (i % S === 0) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Pass ${r + 1}`); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('u', r); } }; }
+    d.onclick = () => { focus = { kind: 'u', i: r }; tap('u', r); };
+    d.onpointerenter = e => { if (e.pointerType === 'mouse') setFocus({ kind: 'u', i: r }); };
+    if (i % S === 0) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Pass ${r + 1}`); d.onfocus = () => setFocus({ kind: 'u', i: r }); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('u', r); } }; }
   });
-  $('threading').onmouseleave = () => thr.forEach(e => e.classList.remove('hover'));
-  $('treadling').onmouseleave = () => tre.forEach(e => e.classList.remove('hover'));
+  // A mouse leaving the draft clears the highlight; on touch the last tap keeps it.
+  $('draft').onpointerleave = e => { if (e.pointerType === 'mouse') setFocus(null); };
+  band = document.createElement('div'); band.className = 'band'; band.hidden = true; $('cloth').appendChild(band);
+  focus = null;
   tie.forEach((d, i) => d.classList.toggle('on', game.tie[i % S][S - 1 - Math.floor(i / S)] === 1));
   clo.forEach((d, i) => d.style.setProperty('--r', Math.floor(i / N) + i % N));
   $('target').innerHTML = '';
   game.target.forEach(v => { const d = document.createElement('div'); d.className = v ? 'w' : 'f'; $('target').appendChild(d); });
+}
+function setFocus(f) { focus = f; highlight(); }
+// For a pass: its treadle's tie-up column, the frames that treadle lifts, and so
+// the threads that show on it. For a thread: its frame's tie-up row and the
+// treadles that lift it, so the passes it shows on.
+function highlight() {
+  for (const d of [...thr, ...tie, ...tre]) d.classList.remove('hl', 'lift');
+  band.hidden = !focus;
+  if (!focus) return;
+  const frameOf = i => S - 1 - Math.floor(i / N); // threading row to frame
+  const tieFrame = i => S - 1 - Math.floor(i / S), tieTreadle = i => i % S;
+  if (focus.kind === 'u') {
+    const r = focus.i, tr = game.u[r];
+    tre.forEach((d, i) => { if (Math.floor(i / S) === r) d.classList.add('hl', 'lift'); });
+    tie.forEach((d, i) => { if (tieTreadle(i) === tr) d.classList.add('hl', 'lift'); });
+    thr.forEach((d, i) => { if (game.tie[tr][frameOf(i)] === 1) d.classList.add('hl', 'lift'); });
+    Object.assign(band.style, { left: '0', width: '100%', top: `calc(${r} * var(--cell))`, height: 'var(--cell)' });
+  } else {
+    const c = focus.i, f = game.t[c];
+    thr.forEach((d, i) => { if (i % N === c) d.classList.add('hl', 'lift'); });
+    tie.forEach((d, i) => { if (tieFrame(i) === f) d.classList.add('hl', 'lift'); });
+    tre.forEach((d, i) => { if (game.tie[i % S][f] === 1) d.classList.add('hl', 'lift'); });
+    Object.assign(band.style, { top: '0', height: '100%', left: `calc(${c} * var(--cell))`, width: 'var(--cell)' });
+  }
 }
 function tap(kind, i) {
   if (game.solved) return;
@@ -287,6 +320,7 @@ function draw() {
   $('draft').classList.toggle('hints', game.hints);
   $('hint').setAttribute('aria-pressed', game.hints);
   $('hint').textContent = game.hints ? 'Hide the tip' : 'Give me a tip';
+  highlight();
   showResult();
 }
 function resetLoom() {
