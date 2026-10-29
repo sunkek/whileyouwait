@@ -30,6 +30,7 @@
 :root {
   --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
   --fg: #1A1611; --muted: #5A5346; --brand: #56744B; --accent-ink: #956C0A;
+  --bad: #C0492F; --bad-bg: #F6E1DA; --ok-bg: #E3EBDD; --blue: #3F63A8;
   --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
   --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
   --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -40,10 +41,12 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
   --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
   --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
 /* Same column as the games: 600px, 20/48 vertical padding, 16px gutters. */
@@ -55,6 +58,38 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .lede { color: var(--muted); margin: 0; max-width: 46ch; }
 .games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
+.game { display: grid; grid-template-columns: 1fr 120px; gap: 16px; align-items: center; }
+.preview { width: 120px; height: 80px; display: block; overflow: visible; }
+@media (max-width: 440px) { .game { grid-template-columns: 1fr 88px; gap: 12px; } .preview { width: 88px; height: 59px; } }
+
+/* Card previews: one looping story per game, drawn in the site's tokens. */
+.preview .node { fill: var(--tile); stroke: var(--wire); stroke-width: 1.5; }
+.preview .edge { stroke: var(--wire); stroke-width: 1.5; fill: none; }
+.rc .root { animation: rc-root 6s infinite; }
+.rc .e2 { animation: rc-e2 6s infinite; }
+.rc .n2 { animation: rc-n2 6s infinite; }
+.rc .e1 { animation: rc-e1 6s infinite; }
+.rc .n1 { animation: rc-n1 6s infinite; }
+@keyframes rc-root { 0%, 5% { fill: var(--tile); stroke: var(--wire); } 10%, 60% { fill: var(--bad-bg); stroke: var(--bad); } 66%, 82% { fill: var(--ok-bg); stroke: var(--brand); } 92%, 100% { fill: var(--tile); stroke: var(--wire); } }
+@keyframes rc-e2 { 0%, 14% { stroke: var(--wire); } 20%, 62% { stroke: var(--bad); } 70%, 100% { stroke: var(--wire); } }
+@keyframes rc-n2 { 0%, 22% { fill: var(--tile); stroke: var(--wire); } 28%, 62% { fill: var(--bad-bg); stroke: var(--bad); } 70%, 100% { fill: var(--tile); stroke: var(--wire); } }
+@keyframes rc-e1 { 0%, 32% { stroke: var(--wire); } 38%, 62% { stroke: var(--bad); } 70%, 100% { stroke: var(--wire); } }
+@keyframes rc-n1 { 0%, 40% { fill: var(--tile); stroke: var(--wire); } 46%, 62% { fill: var(--bad-bg); stroke: var(--bad); } 70%, 100% { fill: var(--tile); stroke: var(--wire); } }
+.fl rect { transform-box: fill-box; transform-origin: center; opacity: 0; animation: fl-pop 7s infinite; animation-delay: calc(var(--d) * 0.14s); }
+.fl .pass { fill: var(--brand); }
+.fl .fail { fill: var(--bad); }
+@keyframes fl-pop { 0% { opacity: 0; transform: scale(0.4); } 4%, 80% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(1); } }
+.hx .cell { fill: var(--tile); stroke: var(--line); stroke-width: 1.5; }
+.hx .wire { stroke: var(--wire); stroke-width: 4; stroke-linecap: round; }
+.hx .src { fill: var(--bad); }
+.hx .lead { stroke: var(--bad); }
+.hx .spin { transform-box: view-box; transform-origin: 60px 40px; animation: hx-spin 5s infinite; }
+.hx .spin .wire, .hx .tail { animation: hx-wire 5s infinite; }
+.hx .rcv { fill: var(--tile); stroke: var(--bad); stroke-width: 2.5; animation: hx-rcv 5s infinite; }
+@keyframes hx-spin { 0%, 14% { transform: rotate(120deg); } 22%, 36% { transform: rotate(60deg); } 44%, 86% { transform: rotate(0deg); } 94%, 100% { transform: rotate(120deg); } }
+@keyframes hx-wire { 0%, 45% { stroke: var(--wire); } 49%, 86% { stroke: var(--bad); } 92%, 100% { stroke: var(--wire); } }
+@keyframes hx-rcv { 0%, 49% { fill: var(--tile); } 53%, 86% { fill: var(--bad); } 92%, 100% { fill: var(--tile); } }
+@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .fl rect { opacity: 1; } .hx .spin { transform: none; } }
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -76,16 +111,65 @@ footer a { color: inherit; }
 
   <ul class="games">
     <li><a class="game" href="/root-cause/" data-save="rootcause4-">
-      <div class="game-top"><h2>Root Cause</h2><span class="tag">Incident</span></div>
-      <p>Alerts cascade through a service graph. Check logs and attempt fixes to find which services actually broke, before the downtime adds up.</p>
+      <div class="game-body">
+        <div class="game-top"><h2>Root Cause</h2><span class="tag">Incident</span></div>
+        <p>Alerts cascade through a service graph. Check logs and attempt fixes to find which services actually broke, before the downtime adds up.</p>
+      </div>
+      <svg class="preview rc" viewBox="0 0 120 80" aria-hidden="true">
+        <path class="edge e1" d="M18 17 L39 33"/>
+        <path class="edge e1" d="M60 17 L39 33"/>
+        <path class="edge e1" d="M60 17 L81 33"/>
+        <path class="edge e1" d="M102 17 L81 33"/>
+        <path class="edge e2" d="M39 46 L60 63"/>
+        <path class="edge e2" d="M81 46 L60 63"/>
+        <rect class="node n1" x="6" y="4" width="24" height="13" rx="3"/>
+        <rect class="node n1" x="48" y="4" width="24" height="13" rx="3"/>
+        <rect class="node n1" x="90" y="4" width="24" height="13" rx="3"/>
+        <rect class="node n2" x="27" y="33" width="24" height="13" rx="3"/>
+        <rect class="node n2" x="69" y="33" width="24" height="13" rx="3"/>
+        <rect class="node root" x="48" y="63" width="24" height="13" rx="3"/>
+      </svg>
     </a></li>
     <li><a class="game" href="/flaky/" data-save="flaky1-">
-      <div class="game-top"><h2>Flaky</h2><span class="tag">Test suite</span></div>
-      <p>CI is red because of hidden order dependencies between tests. Design runs to find them in as little CI time as you can.</p>
+      <div class="game-body">
+        <div class="game-top"><h2>Flaky</h2><span class="tag">Test suite</span></div>
+        <p>CI is red because of hidden order dependencies between tests. Design runs to find them in as little CI time as you can.</p>
+      </div>
+      <svg class="preview fl" viewBox="0 0 120 80" aria-hidden="true">
+        <rect class="pass" x="6.0" y="4" width="12" height="12" rx="2" style="--d:0"/>
+        <rect class="pass" x="21.5" y="4" width="12" height="12" rx="2" style="--d:1"/>
+        <rect class="pass" x="37.0" y="4" width="12" height="12" rx="2" style="--d:2"/>
+        <rect class="pass" x="52.5" y="4" width="12" height="12" rx="2" style="--d:3"/>
+        <rect class="pass" x="68.0" y="4" width="12" height="12" rx="2" style="--d:4"/>
+        <rect class="pass" x="83.5" y="4" width="12" height="12" rx="2" style="--d:5"/>
+        <rect class="fail" x="99.0" y="4" width="12" height="12" rx="2" style="--d:6"/>
+        <rect class="pass" x="6.0" y="23" width="12" height="12" rx="2" style="--d:7"/>
+        <rect class="pass" x="21.5" y="23" width="12" height="12" rx="2" style="--d:8"/>
+        <rect class="pass" x="37.0" y="23" width="12" height="12" rx="2" style="--d:9"/>
+        <rect class="pass" x="52.5" y="23" width="12" height="12" rx="2" style="--d:10"/>
+        <rect class="fail" x="68.0" y="23" width="12" height="12" rx="2" style="--d:11"/>
+        <rect class="pass" x="6.0" y="42" width="12" height="12" rx="2" style="--d:12"/>
+        <rect class="pass" x="21.5" y="42" width="12" height="12" rx="2" style="--d:13"/>
+        <rect class="pass" x="37.0" y="42" width="12" height="12" rx="2" style="--d:14"/>
+        <rect class="pass" x="6.0" y="61" width="12" height="12" rx="2" style="--d:15"/>
+        <rect class="fail" x="21.5" y="61" width="12" height="12" rx="2" style="--d:16"/>
+      </svg>
     </a></li>
     <li><a class="game" href="/hexroute/" data-save="hexroute-">
-      <div class="game-top"><h2>Hexroute</h2><span class="tag">Light routing</span></div>
-      <p>Rotate hex tiles to route red, green and blue light so each receiver gets exactly its colour.</p>
+      <div class="game-body">
+        <div class="game-top"><h2>Hexroute</h2><span class="tag">Light routing</span></div>
+        <p>Rotate hex tiles to route red, green and blue light so each receiver gets exactly its colour.</p>
+      </div>
+      <svg class="preview hx" viewBox="0 0 120 80" aria-hidden="true">
+        <polygon class="cell" points="27.1,21.0 43.5,30.5 43.5,49.5 27.1,59.0 10.6,49.5 10.6,30.5"/>
+        <polygon class="cell" points="60.0,21.0 76.5,30.5 76.5,49.5 60.0,59.0 43.5,49.5 43.5,30.5"/>
+        <polygon class="cell" points="92.9,21.0 109.4,30.5 109.4,49.5 92.9,59.0 76.5,49.5 76.5,30.5"/>
+        <line class="wire lead" x1="27.1" y1="40" x2="43.5" y2="40"/>
+        <g class="spin"><line class="wire" x1="43.5" y1="40" x2="76.5" y2="40"/></g>
+        <line class="wire tail" x1="76.5" y1="40" x2="92.9" y2="40"/>
+        <circle class="src" cx="27.1" cy="40" r="6"/>
+        <circle class="rcv" cx="92.9" cy="40" r="6"/>
+      </svg>
     </a></li>
   </ul>
 
