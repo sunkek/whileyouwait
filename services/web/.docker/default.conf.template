@@ -40,6 +40,13 @@ server {
         proxy_set_header Host $host;
     }
 
+    error_page 404 /404.html;
+
+    # Social cards and icons change only with a deploy; a day of caching is plenty.
+    location ~ ^/(og/|favicon\.svg$|apple-touch-icon\.png$) {
+        add_header Cache-Control "public, max-age=86400";
+    }
+
     location / {
         try_files $uri $uri/ =404;
         add_header Cache-Control "no-cache";

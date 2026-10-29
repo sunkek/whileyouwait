@@ -1,4 +1,4 @@
-<title>Hexroute</title>
+<title>Hexroute: a daily hex light-routing puzzle · WhileYouWait</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -38,7 +38,7 @@
   --sig-1: #E06A4E; --sig-2: #7DB06A; --sig-4: #6E8FD6;
   --sig-3: #E6AC0C; --sig-5: #C478B8; --sig-6: #5BBFC8; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; }
-.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 40px;
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-direction: column; gap: 16px; }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -108,7 +108,7 @@ select { font: 500 14px var(--font-body); padding: 7px 8px; border-radius: var(-
 
   <div class="result" id="result" hidden>
     <h2 id="r-title"></h2>
-    <textarea id="r-share" rows="2" readonly aria-label="Shareable result"></textarea>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
     <div class="controls">
       <button class="btn primary" id="copy">Copy result</button>
       <button class="btn" id="next" hidden>Next puzzle</button>
@@ -421,8 +421,8 @@ const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
 function shareText() {
   const d = game.moves - game.par;
   return mode === 'daily'
-    ? `Hexroute #${dailyNo} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}`
-    : `Hexroute practice · ${game.level} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}`;
+    ? `Hexroute #${dailyNo} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}\n${location.origin}/hexroute/`
+    : `Hexroute practice · ${game.level} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}\n${location.origin}/hexroute/`;
 }
 function showResult() {
   const box = document.getElementById('result');

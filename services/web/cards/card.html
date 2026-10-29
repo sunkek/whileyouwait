@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- Social card template, 1200x630. scripts/render-cards.sh screenshots it
+     once per page with ?eyebrow=&title=&text= and commits the PNGs. -->
+<html lang="en">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=block">
+<style>
+html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+body { background: #FAF8F3; color: #1A1611; font-family: "IBM Plex Sans", sans-serif;
+  display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding: 72px 84px; }
+.eyebrow { font: 500 24px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: 0.14em; color: #956C0A; }
+h1 { font-weight: 600; font-size: 96px; letter-spacing: -0.03em; line-height: 1; margin: 20px 0 28px; }
+p { font-size: 34px; line-height: 1.35; color: #5A5346; margin: 0; max-width: 960px; }
+footer { display: flex; align-items: center; gap: 18px; font: 500 26px "IBM Plex Mono", monospace; color: #5A5346; border-top: 2px solid #E4DCD0; padding-top: 28px; }
+footer img { width: 52px; height: 52px; }
+footer b { color: #1A1611; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+</style>
+<main>
+  <div class="eyebrow" id="eyebrow"></div>
+  <h1 id="title"></h1>
+  <p id="text"></p>
+</main>
+<footer><img src="../public/favicon.svg" alt=""><b>WhileYouWait</b> · puzzles for while the build runs · no timers</footer>
+<script>
+const q = new URLSearchParams(location.search);
+for (const k of ['eyebrow', 'title', 'text']) document.getElementById(k).textContent = q.get(k) || '';
+</script>

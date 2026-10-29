@@ -2,10 +2,25 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>WhileYouWait</title>
+<title>WhileYouWait: daily deduction puzzles for developers</title>
 <meta name="description" content="Daily deduction puzzles for developers, for while the build runs. No timers.">
 <meta property="og:title" content="WhileYouWait">
 <meta property="og:description" content="Daily deduction puzzles for developers, for while the build runs. No timers.">
+<link rel="canonical" href="https://whileyouwait.suncake.xyz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WhileYouWait">
+<meta property="og:url" content="https://whileyouwait.suncake.xyz/">
+<meta property="og:image" content="https://whileyouwait.suncake.xyz/og/catalog.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#FAF8F3">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"WhileYouWait","url":"https://whileyouwait.suncake.xyz/",
+ "description":"Daily deduction puzzles for developers, for while the build runs. No timers."}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="/shared/config.js"></script>
@@ -31,9 +46,12 @@
   --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
-.wrap { max-width: 640px; margin: 0 auto; padding: 48px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 28px; }
+/* Same column as the games: 600px, 20/48 vertical padding, 16px gutters. */
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 24px; }
 .eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
-h1 { font-weight: 600; font-size: 34px; letter-spacing: -0.02em; margin: 4px 0 6px; }
+h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6px; }
 .lede { color: var(--muted); margin: 0; max-width: 46ch; }
 .games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
