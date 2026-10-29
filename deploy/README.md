@@ -69,6 +69,11 @@ key that `authorized_keys` pins to
 pulls and runs `up -d --wait`. A leaked key can only redeploy existing image
 tags of this app.
 
+`/opt/ci-deploy.sh` is root's and only accepts the app names in its `case`
+allowlist, so a new app on this host needs `sudo` to be added there. Some
+`/opt/<app>` directories set up earlier are root's as well, so removing one can
+need `sudo` even though `deploy` created `/opt/whileyouwait` itself.
+
 Repo secrets: `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`. Without
 `DEPLOY_SSH_KEY` the job no-ops and stays green.
 
