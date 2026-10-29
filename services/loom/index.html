@@ -66,10 +66,20 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
 .threading .cell.hover, .treadling .cell.hover { background: var(--empty); }
 .threading .cell.on, .treadling .cell.on { background: var(--ink); border-color: var(--ink); }
 .tieup .cell.on { background: var(--muted); border-color: var(--muted); }
-.cloth .cell { border: 0; position: relative; transition: background 160ms var(--ease); }
-/* Warp shows as vertical thread, weft as horizontal: the shading runs across the thread. */
-.cloth .w { background: linear-gradient(90deg, color-mix(in srgb, var(--dye) 72%, black), var(--dye) 45%, color-mix(in srgb, var(--dye) 82%, white)); }
-.cloth .f { background: linear-gradient(180deg, color-mix(in srgb, var(--weft) 82%, black), var(--weft) 45%, color-mix(in srgb, var(--weft) 70%, white)); }
+/* Woven look: each cell is the top thread's segment, a little narrower than the
+   cell, over a dark ground that shows through the gaps. Shading runs across the
+   thread for roundness, and the ends darken where it dips under its neighbour. */
+.cloth { background: color-mix(in srgb, var(--dye) 28%, #1A1611); }
+.cloth .cell { border: 0; position: relative; background: transparent; }
+.cloth .cell::before { content: ""; position: absolute; transition: background 160ms var(--ease); }
+/* --a / --b darken the start / end of a segment only where the thread dips
+   under a crossing one; a thread floating over several cells stays unbroken. */
+.cloth .w::before { inset: 0 13%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, var(--a, 0)), transparent 24%, transparent 76%, rgba(0, 0, 0, var(--b, 0))),
+    linear-gradient(90deg, color-mix(in srgb, var(--dye) 72%, black), var(--dye) 45%, color-mix(in srgb, var(--dye) 82%, white)); }
+.cloth .f::before { inset: 13% 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, var(--a, 0)), transparent 24%, transparent 76%, rgba(0, 0, 0, var(--b, 0))),
+    linear-gradient(180deg, color-mix(in srgb, var(--weft) 82%, black), var(--weft) 45%, color-mix(in srgb, var(--weft) 70%, white)); }
 .hints .cloth .x::after { content: ""; position: absolute; inset: 28%; border-radius: 50%; border: 2px solid var(--bad); }
 .solved .cloth .cell { animation: settle 520ms var(--ease) both; animation-delay: calc(var(--r) * 28ms); }
 @keyframes settle { 0% { filter: brightness(1); } 40% { filter: brightness(1.35); } 100% { filter: brightness(1); } }
@@ -131,10 +141,10 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter
     <div class="side">
       <div class="controls">
         <button class="btn" id="reset">Reset loom</button>
-        <button class="btn" id="hint" aria-pressed="false">Show wrong cells</button>
+        <button class="btn" id="hint" aria-pressed="false">Give me a tip</button>
         <button class="btn" id="new" hidden>New puzzle</button>
       </div>
-      <span class="hint" id="hint-note">Reset restores the start; taps still count. Showing wrong cells marks the result as assisted.</span>
+      <span class="hint" id="hint-note">Reset restores the start; taps still count. A tip rings the wrong cells and marks the result as assisted.</span>
     </div>
   </div>
 
@@ -261,14 +271,22 @@ function draw() {
   const cloth = weave(game.tie, game.t, game.u);
   thr.forEach((d, i) => d.classList.toggle('on', game.t[i % N] === S - 1 - Math.floor(i / N)));
   tre.forEach((d, i) => d.classList.toggle('on', game.u[Math.floor(i / S)] === i % S));
-  clo.forEach((d, i) => { d.className = 'cell ' + (cloth[i] ? 'w' : 'f') + (cloth[i] !== game.target[i] ? ' x' : ''); });
+  clo.forEach((d, i) => {
+    const r = Math.floor(i / N), c = i % N, w = cloth[i];
+    d.className = 'cell ' + (w ? 'w' : 'f') + (w !== game.target[i] ? ' x' : '');
+    // A warp segment dips under the pass above or below it when that cell is weft, and vice versa.
+    const a = w ? r > 0 && !cloth[i - N] : c > 0 && cloth[i - 1];
+    const b = w ? r < N - 1 && !cloth[i + N] : c < N - 1 && cloth[i + 1];
+    d.style.setProperty('--a', a ? 0.34 : 0);
+    d.style.setProperty('--b', b ? 0.34 : 0);
+  });
   const match = cloth.filter((v, i) => v === game.target[i]).length;
   $('s-match').textContent = `${match}/${N * N}`;
   $('s-taps').textContent = game.taps;
   $('s-par').textContent = game.par;
   $('draft').classList.toggle('hints', game.hints);
   $('hint').setAttribute('aria-pressed', game.hints);
-  $('hint').textContent = game.hints ? 'Hide wrong cells' : 'Show wrong cells';
+  $('hint').textContent = game.hints ? 'Hide the tip' : 'Give me a tip';
   showResult();
 }
 function resetLoom() {

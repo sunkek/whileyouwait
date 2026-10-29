@@ -25,7 +25,7 @@ repository root.
   to three positions. Par is the forward taps that undo that, so it is not a
   proven minimum: another setup may weave the same cloth in fewer taps.
 - Any setup whose cloth matches the target wins.
-- Showing the wrong cells is a hint and marks the result as assisted.
+- "Give me a tip" rings the wrong cells and marks the result as assisted.
 - The daily is seeded from the local date; #1 is 2026-10-29. Changing the
   generator, the RNG, the tie-ups or the dyes changes every daily.
 
