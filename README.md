@@ -6,6 +6,7 @@ Live: <https://whileyouwait.suncake.xyz>
 
 | Game | Path | What it is |
 |---|---|---|
+| [Poise](services/poise/README.md) | `/poise/` | Balance puzzle: swap weights on a hanging mobile until every bar hangs level |
 | [Loom](services/loom/README.md) | `/loom/` | Weaving puzzle: set threads and treadles so the cloth weaves the day's pattern |
 | [Root Cause](services/root-cause/README.md) | `/root-cause/` | Incident puzzle: find the broken services behind cascading alerts |
 | [Flaky](services/flaky/README.md) | `/flaky/` | Test-pollution puzzle: find hidden order dependencies in as little CI time as you can |
@@ -54,6 +55,7 @@ node services/hexroute/scripts/check-generator.mjs
 node services/root-cause/scripts/check-puzzles.mjs
 node services/flaky/scripts/check-generator.mjs
 node services/loom/scripts/check-generator.mjs
+node services/poise/scripts/check-generator.mjs
 node services/web/scripts/check-track.mjs
 ```
 

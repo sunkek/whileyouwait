@@ -97,7 +97,17 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .lm .fa { stop-color: color-mix(in srgb, var(--weft) 82%, black); } .lm .fb { stop-color: var(--weft); } .lm .fc { stop-color: color-mix(in srgb, var(--weft) 70%, white); }
 .lm .mix { animation: lm-fix 6s infinite; animation-delay: calc(var(--d) * 0.22s); }
 @keyframes lm-fix { 0%, 6% { opacity: 1; } 10%, 78% { opacity: 0; } 86%, 100% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } }
+/* Poise preview: a bar leans under the heavy side, sways and settles level. */
+.po .str { stroke: var(--wire); stroke-width: 1.2; }
+.po .beam { stroke: var(--fg); stroke-width: 2.6; stroke-linecap: round; transform-box: view-box; transform-origin: 60px 20px; animation: po-tilt 5s infinite; }
+.po .tick { stroke: inherit; stroke-width: 1.2; }
+.po .pv { fill: var(--tile); stroke: var(--fg); stroke-width: 1.2; }
+.po .disc { fill: color-mix(in srgb, var(--accent-ink) 72%, var(--tile)); stroke: var(--accent-ink); stroke-width: 1; }
+.po .dl { animation: po-dl 5s infinite; } .po .dr { animation: po-dr 5s infinite; }
+@keyframes po-tilt { 0%, 30% { transform: rotate(8deg); stroke: var(--fg); } 38% { transform: rotate(-3deg); stroke: var(--fg); } 46%, 86% { transform: rotate(0deg); stroke: var(--brand); } 96%, 100% { transform: rotate(8deg); stroke: var(--fg); } }
+@keyframes po-dl { 0%, 30% { transform: translateY(-5px); } 38% { transform: translateY(1.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-5px); } }
+@keyframes po-dr { 0%, 30% { transform: translateY(2.5px); } 38% { transform: translateY(-0.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(2.5px); } }
+@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } .po .beam { stroke: var(--brand); } }
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -118,6 +128,18 @@ footer a { color: inherit; }
   </header>
 
   <ul class="games">
+    <li><a class="game" href="/poise/" data-save="poise1-">
+      <div class="game-body">
+        <div class="game-top"><h2>Poise</h2><span class="tag">Balance</span></div>
+        <p>Swap the weights on a hanging mobile until every bar hangs level. Each swap re-tilts the bars above it.</p>
+      </div>
+      <svg class="preview po" viewBox="0 0 120 80" aria-hidden="true">
+        <line class="str" x1="60" y1="0" x2="60" y2="20"/>
+        <g class="dl"><line class="str" x1="24" y1="20" x2="24" y2="38"/><circle class="disc" cx="24" cy="45" r="7"/></g>
+        <g class="dr"><line class="str" x1="78" y1="20" x2="78" y2="35"/><circle class="disc" cx="78" cy="45" r="10"/></g>
+        <g class="beam"><line x1="24" y1="20" x2="78" y2="20"/><line class="tick" x1="42" y1="17" x2="42" y2="23"/><circle class="pv" cx="60" cy="20" r="2.6"/></g>
+      </svg>
+    </a></li>
     <li><a class="game" href="/loom/" data-save="loom1-">
       <div class="game-body">
         <div class="game-top"><h2>Loom</h2><span class="tag">Weaving</span></div>

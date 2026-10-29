@@ -1,0 +1,401 @@
+<title>Poise: a daily balance puzzle · WhileYouWait</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column; the mobile hangs from a rail across the column, stats above, controls below.
+   Tokens from the nikita zotov design system: warm stone neutrals, sage brand, amber accent, IBM Plex, small radii.
+   Weights are brass discs; a level bar turns sage. */
+:root {
+  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
+  --fg: #1A1611; --muted: #5A5346; --ink: #3A342B;
+  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --accent-ink: #956C0A;
+  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
+  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
+  --disc: #C99A3B; --disc-edge: #8A6416; --disc-text: #2A1E07; --string: #8F877A; --lean: #3A342B;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-md: 5px; --radius-lg: 8px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --disc: #D9AE52; --disc-edge: #F0CF86; --disc-text: #1A1611; --string: #6F675A; --lean: #D8CFC0; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; }
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
+h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0; }
+.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: var(--radius-md); }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); box-shadow: var(--shadow-sm); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-block: 1px solid var(--line); }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 8px; }
+.stat b { font: 500 22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.stat small { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+
+.stage { border-top: 3px solid var(--ink); user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.stage svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: manipulation; }
+.stage .string { stroke: var(--string); stroke-width: 1.2; }
+.stage .bar { stroke: var(--lean); stroke-width: 3.2; stroke-linecap: round; transition: stroke 200ms var(--ease); }
+.stage .level .bar { stroke: var(--brand); }
+.stage .tick { stroke: var(--lean); stroke-width: 1.4; }
+.stage .level .tick { stroke: var(--brand); }
+.stage .pivot { fill: var(--bg); stroke: var(--lean); stroke-width: 1.6; }
+.stage .level .pivot { stroke: var(--brand); }
+.stage .hit { fill: transparent; cursor: pointer; }
+.stage .disc { fill: var(--disc); stroke: var(--disc-edge); stroke-width: 1.2; pointer-events: none; }
+.stage .disc.sel { stroke: var(--fg); stroke-width: 3; }
+.stage .num { font: 600 15px var(--font-mono); fill: var(--disc-text); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.stage .arm { font: 500 10px var(--font-mono); fill: var(--muted); text-anchor: middle; pointer-events: none; }
+.stage.solved .disc { animation: settle 600ms var(--ease) both; }
+@keyframes settle { 40% { fill: var(--brand); } }
+
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--tile); color: var(--fg); font: 500 14px var(--font-body); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; }
+.btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible { outline: none; box-shadow: var(--ring); }
+.note { color: var(--muted); font-size: 13px; min-height: 1.4em; margin: 0; }
+.result { border: 1px solid var(--brand); background: var(--tile); border-radius: var(--radius-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.result h2 { font-size: 17px; font-weight: 600; margin: 0; }
+.result textarea { font: 13px var(--font-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px; resize: none; }
+.rules { color: var(--muted); font-size: 14px; line-height: 1.55; }
+.rules summary { cursor: pointer; color: var(--fg); font-weight: 500; }
+.rules ul { margin: 8px 0 0; padding-left: 20px; max-width: 62ch; display: flex; flex-direction: column; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { .stage.solved .disc { animation: none; } }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1>Poise</h1>
+    </div>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-level">0/0</b><small>Level bars</small></div>
+    <div class="stat"><b id="s-swaps">0</b><small>Swaps</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Fewest</small></div>
+  </div>
+
+  <div class="stage" id="stage"><svg id="mobile" role="group" aria-label="The mobile: tap a weight, then another to swap them"></svg></div>
+  <p class="note" id="note">Tap a weight, then another to swap them.</p>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next mobile</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="reset">Start over</button>
+    <button class="btn" id="new" hidden>New mobile</button>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Make every bar of the mobile hang level.</li>
+      <li>A bar is level when weight × distance is the same on both sides. The distance is the number of notches from the pivot to the hook, also written above each arm. A side's weight is everything hanging below it.</li>
+      <li>Tap a weight, then another to swap them. Undo takes a swap back, and the swap still counts.</li>
+      <li>A bar that is out of balance leans toward its heavy side, always by the same amount: a lean says which side is heavy, not by how much.</li>
+      <li>Fewest is the swaps the day's scramble needs. Start from the top bar: it decides what each half must weigh.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+// ---------- rules ----------
+function rng(str) { // FNV-1a hash of the seed string into mulberry32
+  let seed = [...str].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(R, a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+
+// Random tree with n hooks, at most `depth` bars deep; hooks are numbered left to right.
+function makeTree(R, n, depth) {
+  let next = 0;
+  const build = (n, depth) => {
+    if (n === 1) return { hook: next++ };
+    const lo = Math.max(1, n - (2 ** (depth - 1))), hi = Math.min(n - 1, 2 ** (depth - 1));
+    const a = lo + Math.floor(R() * (hi - lo + 1));
+    let dl = 1 + Math.floor(R() * 3), dr = 1 + Math.floor(R() * 3);
+    const g = gcd(dl, dr); dl /= g; dr /= g;   // 2:2 hangs like 1:1, so draw it that way
+    return { l: build(a, depth - 1), r: build(n - a, depth - 1), dl, dr };
+  };
+  return build(n, depth);
+}
+const hooks = t => t.hook !== undefined ? 1 : hooks(t.l) + hooks(t.r);
+const bars = t => t.hook !== undefined ? [] : [t, ...bars(t.l), ...bars(t.r)];
+const weightOf = (t, w) => t.hook !== undefined ? w[t.hook] : weightOf(t.l, w) + weightOf(t.r, w);
+// Positive when the right side outweighs the left (weight x notches).
+const torque = (bar, w) => weightOf(bar.r, w) * bar.dr - weightOf(bar.l, w) * bar.dl;
+const balanced = (t, w) => bars(t).every(b => torque(b, w) === 0);
+
+// Number of ways to hang `values` (distinct) on the hooks so every bar is level.
+// Top down: a bar's total fixes what each side must weigh, so only subsets with
+// that sum and the right number of hooks are tried. Stops at `cap`.
+function countSolutions(tree, values, cap = 2) {
+  const n = values.length;
+  const sumOf = mask => { let s = 0; for (let i = 0; i < n; i++) if (mask >> i & 1) s += values[i]; return s; };
+  const pop = m => { let c = 0; while (m) { c += m & 1; m >>= 1; } return c; };
+  const count = (t, mask) => {
+    if (t.hook !== undefined) return 1;
+    const total = sumOf(mask), nl = hooks(t.l);
+    if ((total * t.dr) % (t.dl + t.dr)) return 0;
+    const wl = total * t.dr / (t.dl + t.dr);
+    let ways = 0;
+    for (let sub = mask; sub; sub = (sub - 1) & mask) {
+      if (pop(sub) !== nl || sumOf(sub) !== wl) continue;
+      const left = count(t.l, sub); if (!left) continue;
+      ways += left * count(t.r, mask & ~sub);
+      if (ways >= cap) return ways;
+    }
+    return ways;
+  };
+  return count(tree, (1 << n) - 1);
+}
+// Fewest swaps between two arrangements of distinct values: n minus the cycles.
+function minSwaps(from, to) {
+  const pos = new Map(to.map((v, i) => [v, i])), seen = new Array(from.length).fill(false); let cycles = 0;
+  for (let i = 0; i < from.length; i++) { if (seen[i]) continue; cycles++; for (let j = i; !seen[j]; j = pos.get(from[j])) seen[j] = true; }
+  return from.length - cycles;
+}
+
+// Geometry, in drawing units. Discs are one size; strings are STR long, so each
+// bar level is a row. Each subtree reports its left and right extent per row, and
+// a bar's notch length is the smallest that keeps row k of its left subtree clear
+// of rows k-1..k+1 of its right one, so a leaning bar cannot touch its neighbour.
+const DISC = 14, STR = 40, GAP = 10, MAX_WIDTH = 500;
+function layout(t) {
+  if (t.hook !== undefined) return { L: [DISC, DISC], R: [DISC, DISC] };   // a disc spans its row and the next
+  const a = layout(t.l), b = layout(t.r);
+  let need = 0;
+  for (let k = 0; k < a.R.length; k++) for (let j = Math.max(0, k - 1); j <= Math.min(b.L.length - 1, k + 1); j++) need = Math.max(need, a.R[k] + b.L[j] + GAP);
+  t.u = Math.max(16, need / (t.dl + t.dr));
+  const rows = Math.max(a.L.length, b.L.length) + 1, L = [t.dl * t.u + 6], R = [t.dr * t.u + 6];
+  const at = (p, k) => p[k - 1] !== undefined ? p[k - 1] : -Infinity;
+  for (let k = 1; k < rows; k++) {
+    L.push(Math.max(t.dl * t.u + at(a.L, k), at(b.L, k) - t.dr * t.u));
+    R.push(Math.max(t.dr * t.u + at(b.R, k), at(a.R, k) - t.dl * t.u));
+  }
+  return { L, R };
+}
+const extent = tree => { const p = layout(tree); return { left: Math.max(...p.L), right: Math.max(...p.R), rows: p.L.length }; };
+
+// A mobile with n hooks has n - 1 bars, one equation each, so its level weights
+// are fixed up to scale. Smallest whole-number solution, as hook -> weight: each
+// bar scales its two sides so weight x notches matches, then common factors go.
+function smallestLevel(tree) {
+  const go = t => {
+    if (t.hook !== undefined) return { w: { [t.hook]: 1 }, total: 1 };
+    const L = go(t.l), R = go(t.r), g = gcd(L.total * t.dl, R.total * t.dr);
+    const a = R.total * t.dr / g, b = L.total * t.dl / g, w = {};
+    for (const k in L.w) w[k] = L.w[k] * a;
+    for (const k in R.w) w[k] = R.w[k] * b;
+    const f = Object.values(w).reduce(gcd);
+    for (const k in w) w[k] /= f;
+    return { w, total: (L.total * a + R.total * b) / f };
+  };
+  const { w } = go(tree);
+  return Object.keys(w).sort((x, y) => x - y).map(k => w[k]);
+}
+
+// Day's mobile: 9-10 hooks, 4-5 bars deep. Weights are a multiple of the smallest
+// level solution, distinct and at most 30, and must hang level in exactly one
+// arrangement, and the drawing fits MAX_WIDTH. The start is a shuffle at least 6
+// swaps away with at most one bar level.
+function generate(seed) {
+  const R = rng(seed);
+  for (let attempt = 0; ; attempt++) {
+    const n = 9 + Math.floor(R() * 2), depth = 4 + Math.floor(R() * 2);
+    const tree = makeTree(R, n, depth), base = smallestLevel(tree);
+    const ks = []; for (let k = 1; k * Math.max(...base) <= 30; k++) ks.push(k);
+    if (!ks.length) continue;
+    const k = ks[Math.floor(R() * ks.length)], solution = base.map(v => v * k);
+    if (new Set(solution).size !== n) continue;
+    const box = extent(tree);
+    if (box.left + box.right > MAX_WIDTH) continue;   // keeps it legible on a phone
+    const values = solution.slice().sort((a, b) => a - b);
+    if (countSolutions(tree, values) !== 1) continue;
+    let start;
+    for (let k = 0; k < 50; k++) {
+      const s = shuffle(R, solution);
+      if (minSwaps(s, solution) >= 6 && bars(tree).filter(b => torque(b, s) === 0).length <= 1) { start = s; break; }
+    }
+    if (!start) continue;
+    return { seed, tree, box, values, solution, start, par: minSwaps(start, solution), attempts: attempt + 1 };
+  }
+}
+
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+const LEAN = 0.17;               // radians a bar leans when out of balance, whatever the imbalance
+const DISC_STR = 20;             // string from hook to disc, units
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let mode = 'daily', game = null, sel = null, anim = null;
+
+const target = b => Math.sign(torque(b, game.w)) * LEAN;
+
+// Draw the mobile at the bars' current angles. Strings hang straight down from each hook.
+function draw() {
+  const out = [];
+  let low = 0;
+  const node = (t, x, y) => {
+    if (t.hook !== undefined) {
+      const cy = y + DISC_STR + DISC;
+      low = Math.max(low, cy + DISC);
+      out.push(`<line class="string" x1="${x}" y1="${y}" x2="${x}" y2="${cy - DISC}"/>`,
+        `<circle class="hit" data-hook="${t.hook}" cx="${x}" cy="${cy}" r="${DISC + 8}"/>`,
+        `<circle class="disc${sel === t.hook ? ' sel' : ''}" cx="${x}" cy="${cy}" r="${DISC}"/>`,
+        `<text class="num" x="${x}" y="${cy}">${game.w[t.hook]}</text>`);
+      return;
+    }
+    const py = y + STR, c = Math.cos(t.theta), s = Math.sin(t.theta);
+    const lx = x - t.dl * t.u * c, ly = py - t.dl * t.u * s, rx = x + t.dr * t.u * c, ry = py + t.dr * t.u * s;
+    out.push(`<g class="${torque(t, game.w) === 0 ? 'level' : ''}"><line class="string" x1="${x}" y1="${y}" x2="${x}" y2="${py}"/>`,
+      `<line class="bar" x1="${lx}" y1="${ly}" x2="${rx}" y2="${ry}"/>`);
+    // a tick at every notch, so arm lengths can be counted
+    for (let k = -t.dl; k <= t.dr; k++) if (k) out.push(`<line class="tick" x1="${x + k * t.u * c + 3.5 * s}" y1="${py + k * t.u * s - 3.5 * c}" x2="${x + k * t.u * c - 3.5 * s}" y2="${py + k * t.u * s + 3.5 * c}"/>`);
+    out.push(`<text class="arm" x="${(x + lx) / 2}" y="${(py + ly) / 2 - 7}">${t.dl}</text><text class="arm" x="${(x + rx) / 2}" y="${(py + ry) / 2 - 7}">${t.dr}</text>`,
+      `<circle class="pivot" cx="${x}" cy="${py}" r="3.2"/></g>`);
+    node(t.l, lx, ly); node(t.r, rx, ry);
+  };
+  node(game.tree, game.box.left + 8, 0);
+  $('mobile').innerHTML = out.join('');
+  // grow the drawing to the lowest disc seen so far, never shrink it mid-game
+  if (low + 6 > game.height) { game.height = Math.ceil(low + 6); $('mobile').setAttribute('viewBox', `0 0 ${game.box.left + game.box.right + 16} ${game.height}`); }
+}
+
+// Spring each bar toward its lean; children redraw with their parents, so a swap low down shakes the chain above.
+function animate() {
+  if (anim) return;
+  const step = () => {
+    let moving = false;
+    for (const b of game.barList) {
+      const tg = target(b);
+      if (reduced) { b.theta = tg; b.vel = 0; continue; }
+      b.vel = (b.vel + (tg - b.theta) * 0.09) * 0.86; b.theta += b.vel;
+      if (Math.abs(tg - b.theta) > 0.0008 || Math.abs(b.vel) > 0.0008) moving = true; else { b.theta = tg; b.vel = 0; }
+    }
+    draw();
+    anim = moving ? requestAnimationFrame(step) : null;
+  };
+  anim = requestAnimationFrame(step);
+}
+
+function render() {
+  const lv = game.barList.filter(b => torque(b, game.w) === 0).length;
+  $('s-level').textContent = `${lv}/${game.barList.length}`; $('s-swaps').textContent = game.swaps; $('s-par').textContent = game.par;
+  $('undo').disabled = !game.history.length || game.solved; $('reset').disabled = game.solved || game.w.every((v, i) => v === game.start[i]);
+  $('stage').classList.toggle('solved', game.solved);
+  $('result').hidden = !game.solved;
+  if (game.solved) {
+    const d = game.swaps - game.par;
+    $('r-title').textContent = d === 0 ? 'Level in the fewest swaps.' : `Level, ${fmtScore(d)} over the fewest.`;
+    $('r-share').value = shareText();
+    $('next').hidden = mode !== 'practice';
+    $('note').textContent = '';
+  }
+}
+
+function swap(a, b) {
+  game.history.push(game.w.slice());
+  [game.w[a], game.w[b]] = [game.w[b], game.w[a]]; game.swaps++;
+  game.solved = balanced(game.tree, game.w);
+  save(); render(); animate();
+}
+
+$('mobile').addEventListener('pointerdown', e => {
+  if (!game || game.solved) return;
+  const d = e.target.closest('.hit'); if (!d) { sel = null; draw(); return; }
+  const h = +d.dataset.hook;
+  if (sel === null) { sel = h; $('note').textContent = `Picked ${game.w[h]}. Tap another weight to swap, or the same one to put it down.`; }
+  else if (sel === h) { sel = null; $('note').textContent = 'Tap a weight, then another to swap them.'; }
+  else { const a = sel; sel = null; swap(a, h); $('note').textContent = 'Tap a weight, then another to swap them.'; }
+  draw();
+});
+
+// ---------- modes, persistence, sharing ----------
+const today = new Date();
+const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1;
+const SAVE_KEY = 'poise1-' + dateKey;
+
+function save() {
+  if (mode !== 'daily') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ w: game.w, swaps: game.swaps, solved: game.solved })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!s || !Array.isArray(s.w) || s.w.slice().sort((a, b) => a - b).join() !== game.values.join()) return;
+    Object.assign(game, { w: s.w, swaps: s.swaps, solved: s.solved });
+  } catch (e) {}
+}
+
+const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
+function shareText() {
+  const head = mode === 'daily' ? `Poise #${dailyNo}` : 'Poise practice';
+  return `${head} · ${fmtScore(game.swaps - game.par)}\n${game.swaps} swaps · fewest ${game.par}\n${location.origin}/poise/`;
+}
+
+function start(newMode) {
+  mode = newMode;
+  $('tab-daily').setAttribute('aria-pressed', mode === 'daily');
+  $('tab-practice').setAttribute('aria-pressed', mode === 'practice');
+  $('new').hidden = mode !== 'practice';
+  if (anim) { cancelAnimationFrame(anim); anim = null; }
+  const seed = mode === 'daily' ? 'poise-daily-' + dateKey : 'poise-practice-' + Math.random();
+  game = Object.assign(generate(seed), { swaps: 0, solved: false, history: [] });
+  game.w = game.start.slice();
+  if (mode === 'daily') restore();
+  game.barList = bars(game.tree);
+  game.barList.forEach(b => { b.theta = target(b); b.vel = 0; });
+  game.height = 0;
+  $('eyebrow').textContent = mode === 'daily' ? `daily mobile #${dailyNo}` : 'practice mobile';
+  sel = null; $('note').textContent = 'Tap a weight, then another to swap them.';
+  render(); draw();
+}
+
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('undo').onclick = () => { const w = game.history.pop(); if (!w) return; game.w = w; sel = null; save(); render(); animate(); };
+$('reset').onclick = () => { game.history.push(game.w.slice()); game.w = game.start.slice(); sel = null; save(); render(); animate(); };
+$('new').onclick = () => start('practice');
+$('next').onclick = () => start('practice');
+$('copy').onclick = e => {
+  const ta = $('r-share'), btn = e.currentTarget;
+  const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Selected. Copy it manually'; };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy result', 1500); }, fallback);
+  } catch (err) { fallback(); }
+};
+start('daily');
+</script>

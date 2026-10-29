@@ -9,6 +9,7 @@ COPY hexroute/head.html hexroute/index.html /tmp/games/hexroute/
 COPY root-cause/head.html root-cause/index.html root-cause/puzzles.js /tmp/games/root-cause/
 COPY flaky/head.html flaky/index.html /tmp/games/flaky/
 COPY loom/head.html loom/index.html /tmp/games/loom/
+COPY poise/head.html poise/index.html /tmp/games/poise/
 RUN set -e; cd /tmp/games; for g in *; do \
       mkdir -p "/usr/share/nginx/html/$g"; \
       cat "$g/head.html" "$g/index.html" > "/usr/share/nginx/html/$g/index.html"; \
