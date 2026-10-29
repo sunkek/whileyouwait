@@ -1,0 +1,350 @@
+<title>Loom: a daily weaving puzzle · WhileYouWait</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column; the weaving draft is the board, stats above, controls below.
+   Tokens from the nikita zotov design system: warm stone neutrals, sage brand, amber accent, IBM Plex, small radii.
+   The dyes are game colours: one warp dye per day on a cream weft, warmed toward the palette. */
+:root {
+  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
+  --fg: #1A1611; --muted: #5A5346; --ink: #3A342B; --bad: #C0492F;
+  --brand: #56744B; --brand-hover: #42593A; --on-brand: #FAF8F3; --accent-ink: #956C0A;
+  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
+  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
+  --weft: #E9DCC3;
+  --dye-indigo: #2F4A7A; --dye-madder: #9C3B2A; --dye-weld: #A87B12; --dye-woad: #3F6B6E;
+  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-md: 5px; --radius-lg: 8px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --cell: 18px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0; --bad: #E06A4E;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --weft: #D9C9A8;
+  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --ink: #D8CFC0; --bad: #E06A4E;
+  --brand: #86A878; --brand-hover: #A6C19A; --on-brand: #1A1611; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --weft: #D9C9A8;
+  --dye-indigo: #5B7DC4; --dye-madder: #C9604B; --dye-weld: #D3A12A; --dye-woad: #5E9A9C; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; }
+.wrap { max-width: 600px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 0; }
+.tabs { display: flex; gap: 4px; background: var(--empty); padding: 3px; border-radius: var(--radius-md); }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 3px; cursor: pointer; transition: background 120ms var(--ease), color 120ms var(--ease); }
+.tabs button[aria-pressed="true"] { background: var(--tile); color: var(--fg); box-shadow: var(--shadow-sm); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-block: 4px; border-block: 1px solid var(--line); }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 8px; }
+.stat b { font: 500 22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.stat small { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+
+/* The draft, laid out as weavers write it: threading above the cloth, the
+   tie-up in the corner, treadling to the right. Frame 1 is the bottom row. */
+.draft { --dye: var(--dye-indigo); display: grid; grid-template-columns: calc(16 * var(--cell)) calc(4 * var(--cell)); grid-template-rows: calc(4 * var(--cell)) calc(16 * var(--cell)); gap: 8px; justify-content: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+.draft[data-dye="madder"] { --dye: var(--dye-madder); }
+.draft[data-dye="weld"] { --dye: var(--dye-weld); }
+.draft[data-dye="woad"] { --dye: var(--dye-woad); }
+.grid { display: grid; }
+.threading { grid-template-columns: repeat(16, var(--cell)); grid-template-rows: repeat(4, var(--cell)); }
+.tieup { grid-template-columns: repeat(4, var(--cell)); grid-template-rows: repeat(4, var(--cell)); }
+.cloth { grid-template-columns: repeat(16, var(--cell)); grid-template-rows: repeat(16, var(--cell)); box-shadow: var(--shadow-sm); }
+.treadling { grid-template-columns: repeat(4, var(--cell)); grid-template-rows: repeat(16, var(--cell)); }
+.cell { box-sizing: border-box; border: 1px solid var(--line); background: var(--tile); }
+.threading .cell, .treadling .cell { cursor: pointer; transition: background 120ms var(--ease); }
+.threading .cell.hover, .treadling .cell.hover { background: var(--empty); }
+.threading .cell.on, .treadling .cell.on { background: var(--ink); border-color: var(--ink); }
+.tieup .cell.on { background: var(--muted); border-color: var(--muted); }
+.cloth .cell { border: 0; position: relative; transition: background 160ms var(--ease); }
+/* Warp shows as vertical thread, weft as horizontal: the shading runs across the thread. */
+.cloth .w { background: linear-gradient(90deg, color-mix(in srgb, var(--dye) 72%, black), var(--dye) 45%, color-mix(in srgb, var(--dye) 82%, white)); }
+.cloth .f { background: linear-gradient(180deg, color-mix(in srgb, var(--weft) 82%, black), var(--weft) 45%, color-mix(in srgb, var(--weft) 70%, white)); }
+.hints .cloth .x::after { content: ""; position: absolute; inset: 28%; border-radius: 50%; border: 2px solid var(--bad); }
+.solved .cloth .cell { animation: settle 520ms var(--ease) both; animation-delay: calc(var(--r) * 28ms); }
+@keyframes settle { 0% { filter: brightness(1); } 40% { filter: brightness(1.35); } 100% { filter: brightness(1); } }
+.threading .cell:focus-visible, .treadling .cell:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.below { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.target-box { display: flex; flex-direction: column; gap: 6px; }
+.target { --dye: var(--dye-indigo); display: grid; grid-template-columns: repeat(16, 7px); grid-template-rows: repeat(16, 7px); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.target[data-dye="madder"] { --dye: var(--dye-madder); }
+.target[data-dye="weld"] { --dye: var(--dye-weld); }
+.target[data-dye="woad"] { --dye: var(--dye-woad); }
+.target .w { background: var(--dye); } .target .f { background: var(--weft); }
+.side { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--wire); background: var(--tile); color: var(--fg); font: 500 14px var(--font-body); padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer; transition: background 120ms var(--ease), border-color 120ms var(--ease); }
+.btn:hover { background: var(--empty); }
+.btn:active { transform: translateY(0.5px); }
+.btn.primary { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn[aria-pressed="true"] { border-color: var(--bad); color: var(--bad); }
+.btn:focus-visible, .tabs button:focus-visible { outline: none; box-shadow: var(--ring); }
+.result { border: 1px solid var(--line); background: var(--tile); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.result h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; margin: 0; font-size: 18px; text-wrap: balance; }
+.result textarea { font: 13px var(--font-mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px; resize: none; width: 100%; box-sizing: border-box; }
+.rules { color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+.rules summary { cursor: pointer; color: var(--fg); font-weight: 600; }
+.rules ul { padding-left: 18px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; max-width: 65ch; }
+.hint { color: var(--muted); font-size: 0.85rem; }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1>Loom</h1>
+    </div>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-match">0</b><small>Cells right</small></div>
+    <div class="stat"><b id="s-taps">0</b><small>Taps</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Par</small></div>
+  </div>
+
+  <div class="draft" id="draft" aria-label="Weaving draft">
+    <div class="grid threading" id="threading" role="group" aria-label="Threading: tap a column to move that thread to the next frame"></div>
+    <div class="grid tieup" id="tieup" aria-label="Tie-up"></div>
+    <div class="grid cloth" id="cloth" aria-label="Cloth"></div>
+    <div class="grid treadling" id="treadling" role="group" aria-label="Treadling: tap a row to move that pass to the next treadle"></div>
+  </div>
+
+  <div class="below">
+    <div class="target-box"><div class="eyebrow">Target</div><div class="target" id="target" aria-label="Target pattern"></div></div>
+    <div class="side">
+      <div class="controls">
+        <button class="btn" id="reset">Reset loom</button>
+        <button class="btn" id="hint" aria-pressed="false">Show wrong cells</button>
+        <button class="btn" id="new" hidden>New puzzle</button>
+      </div>
+      <span class="hint" id="hint-note">Reset restores the start; taps still count. Showing wrong cells marks the result as assisted.</span>
+    </div>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next puzzle</button>
+    </div>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Weave the target. Coloured squares are a vertical thread showing on top; cream squares are a horizontal pass showing on top.</li>
+      <li>Each of the 16 vertical threads hangs on one of 4 frames: its square in the threading above the cloth. Tap a column there to move the thread to the next frame.</li>
+      <li>Each of the 16 passes presses one of 4 treadles: its square in the treadling on the right. Tap a row there to move the pass to the next treadle.</li>
+      <li>The tie-up in the corner says which frames each treadle lifts: a dark square joins a treadle (its column) to a frame (its row).</li>
+      <li>Where a pass lifts a thread's frame, the thread shows. Threads whose target columns look the same belong on the same frame.</li>
+      <li>Par is the taps that undo the day's scramble. A tap only steps forward, so there is no undo.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+const N = 16, S = 4;
+
+// ---------- rules ----------
+function rng(str) { // FNV-1a hash of the seed string into mulberry32
+  let seed = [...str].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+// Classic four-frame tie-ups, as tie[treadle][frame].
+const TIEUPS = {
+  'twill 2/2': [[1,1,0,0],[0,1,1,0],[0,0,1,1],[1,0,0,1]],
+  'twill 3/1': [[1,1,1,0],[0,1,1,1],[1,0,1,1],[1,1,0,1]],
+  'twill 1/3': [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],
+  'broken twill': [[1,1,0,0],[0,0,1,1],[0,1,1,0],[1,0,0,1]],
+};
+const DYES = ['indigo', 'madder', 'weld', 'woad'];
+
+// Steps of ±1 over the frames that bounce at the ends: point threadings like
+// this are what weave diamonds and zigzags.
+function walk(R) {
+  const out = [Math.floor(R() * S)]; let dir = R() < 0.5 ? 1 : -1;
+  while (out.length < N) {
+    if (R() < 0.25) dir = -dir;
+    let next = out.at(-1) + dir;
+    if (next < 0 || next >= S) { dir = -dir; next = out.at(-1) + dir; }
+    out.push(next);
+  }
+  return out;
+}
+
+// Cell (r, c) shows the thread when pass r's treadle lifts thread c's frame.
+const weave = (tie, t, u) => Array.from({ length: N * N }, (_, i) => tie[u[Math.floor(i / N)]][t[i % N]] === 1);
+
+function generate(seed) {
+  const R = rng(seed);
+  for (;;) {
+    const names = Object.keys(TIEUPS), name = names[Math.floor(R() * names.length)], tie = TIEUPS[name];
+    const solT = walk(R);
+    const solU = R() < 0.5 ? solT.slice() : walk(R); // "as drawn in" half the time: symmetric diamonds
+    const target = weave(tie, solT, solU), share = target.filter(Boolean).length / (N * N);
+    if (share < 0.2 || share > 0.8) continue; // 1/3 and 3/1 twills sit near 25% and 75%
+    // Scramble by stepping some threads and passes back; par is the taps that undo it.
+    const t = solT.slice(), u = solU.slice(); let par = 0;
+    for (const arr of [t, u]) for (let i = 0; i < N; i++) if (R() < 0.55) {
+      const k = 1 + Math.floor(R() * 3); arr[i] = (arr[i] - k + S) % S; par += k;
+    }
+    const start = weave(tie, t, u);
+    if (start.every((v, i) => v === target[i])) continue;
+    return { name, tie, target, t, u, solT, solU, par, dye: DYES[Math.floor(R() * DYES.length)] };
+  }
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+let game, mode = 'daily', thr, tie, clo, tre;
+
+function grid(el, n) {
+  el.innerHTML = '';
+  return Array.from({ length: n }, () => { const d = document.createElement('div'); d.className = 'cell'; el.appendChild(d); return d; });
+}
+function fit() { // 20 cells and the gap across, inside the column
+  const w = Math.min(600, document.documentElement.clientWidth) - 32 - 8;
+  document.documentElement.style.setProperty('--cell', Math.max(12, Math.min(20, Math.floor(w / 20))) + 'px');
+}
+function build() {
+  thr = grid($('threading'), S * N); tie = grid($('tieup'), S * S); clo = grid($('cloth'), N * N); tre = grid($('treadling'), N * S);
+  $('draft').dataset.dye = $('target').dataset.dye = game.dye;
+  // Row 0 of the threading and tie-up is the top, which is frame 4.
+  thr.forEach((d, i) => {
+    const c = i % N;
+    d.onclick = () => tap('t', c);
+    d.onmouseenter = () => thr.forEach((e, j) => e.classList.toggle('hover', j % N === c));
+    if (i < N) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Thread ${c + 1}`); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('t', c); } }; }
+  });
+  tre.forEach((d, i) => {
+    const r = Math.floor(i / S);
+    d.onclick = () => tap('u', r);
+    d.onmouseenter = () => tre.forEach((e, j) => e.classList.toggle('hover', Math.floor(j / S) === r));
+    if (i % S === 0) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', `Pass ${r + 1}`); d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap('u', r); } }; }
+  });
+  $('threading').onmouseleave = () => thr.forEach(e => e.classList.remove('hover'));
+  $('treadling').onmouseleave = () => tre.forEach(e => e.classList.remove('hover'));
+  tie.forEach((d, i) => d.classList.toggle('on', game.tie[i % S][S - 1 - Math.floor(i / S)] === 1));
+  clo.forEach((d, i) => d.style.setProperty('--r', Math.floor(i / N) + i % N));
+  $('target').innerHTML = '';
+  game.target.forEach(v => { const d = document.createElement('div'); d.className = v ? 'w' : 'f'; $('target').appendChild(d); });
+}
+function tap(kind, i) {
+  if (game.solved) return;
+  const arr = kind === 't' ? game.t : game.u;
+  arr[i] = (arr[i] + 1) % S;
+  game.taps++;
+  game.solved = weave(game.tie, game.t, game.u).every((v, j) => v === game.target[j]);
+  save(); draw();
+}
+function draw() {
+  const cloth = weave(game.tie, game.t, game.u);
+  thr.forEach((d, i) => d.classList.toggle('on', game.t[i % N] === S - 1 - Math.floor(i / N)));
+  tre.forEach((d, i) => d.classList.toggle('on', game.u[Math.floor(i / S)] === i % S));
+  clo.forEach((d, i) => { d.className = 'cell ' + (cloth[i] ? 'w' : 'f') + (cloth[i] !== game.target[i] ? ' x' : ''); });
+  const match = cloth.filter((v, i) => v === game.target[i]).length;
+  $('s-match').textContent = `${match}/${N * N}`;
+  $('s-taps').textContent = game.taps;
+  $('s-par').textContent = game.par;
+  $('draft').classList.toggle('hints', game.hints);
+  $('hint').setAttribute('aria-pressed', game.hints);
+  $('hint').textContent = game.hints ? 'Hide wrong cells' : 'Show wrong cells';
+  showResult();
+}
+function resetLoom() {
+  if (game.solved) return;
+  const fresh = generate(game.seed);
+  game.t = fresh.t; game.u = fresh.u;
+  save(); draw();
+}
+
+// ---------- modes, persistence, sharing ----------
+const today = new Date();
+const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const dailyNo = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(2026, 9, 29)) / 864e5) + 1;
+const SAVE_KEY = 'loom1-' + dateKey;
+
+function save() {
+  if (mode !== 'daily') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ t: game.t, u: game.u, taps: game.taps, solved: game.solved, assisted: game.assisted })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!s || s.t.length !== N || s.u.length !== N) return;
+    Object.assign(game, { t: s.t, u: s.u, taps: s.taps, solved: s.solved, assisted: s.assisted });
+  } catch (e) {}
+}
+
+const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
+function shareText() {
+  const head = mode === 'daily' ? `Loom #${dailyNo}` : `Loom practice · ${game.name}`;
+  return `${head} · ${fmtScore(game.taps - game.par)}${game.assisted ? ' · assisted' : ''}\n${game.taps} taps · par ${game.par}\n${location.origin}/loom/`;
+}
+function showResult() {
+  $('result').hidden = !game.solved;
+  $('draft').classList.toggle('solved', game.solved);
+  if (!game.solved) return;
+  const d = game.taps - game.par;
+  $('r-title').textContent =
+    d < 0 ? `Woven under par: ${fmtScore(d)}. You found a shorter setup than the scramble.` :
+    d === 0 ? 'Woven at par. Every tap counted.' : `Woven, ${fmtScore(d)} over par.`;
+  $('r-share').value = shareText();
+  $('next').hidden = mode !== 'practice';
+}
+
+function start(newMode) {
+  mode = newMode;
+  $('tab-daily').setAttribute('aria-pressed', mode === 'daily');
+  $('tab-practice').setAttribute('aria-pressed', mode === 'practice');
+  $('new').hidden = mode !== 'practice';
+  const seed = mode === 'daily' ? 'loom-daily-' + dateKey : 'loom-practice-' + Math.random();
+  game = Object.assign(generate(seed), { seed, taps: 0, solved: false, hints: false, assisted: false });
+  if (mode === 'daily') restore();
+  game.hints = game.assisted && !game.solved;
+  $('eyebrow').textContent = (mode === 'daily' ? `daily weave #${dailyNo}` : 'practice weave') + ' · ' + game.name;
+  build(); draw();
+}
+
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('reset').onclick = resetLoom;
+$('hint').onclick = () => {
+  if (game.solved) return;
+  game.hints = !game.hints;
+  if (game.hints) game.assisted = true;
+  save(); draw();
+};
+$('new').onclick = () => start('practice');
+$('next').onclick = () => start('practice');
+$('copy').onclick = e => {
+  const ta = $('r-share'), btn = e.currentTarget;
+  const fallback = () => { ta.focus(); ta.select(); btn.textContent = 'Selected. Copy it manually'; };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy result', 1500); }, fallback);
+  } catch (err) { fallback(); }
+};
+window.addEventListener('resize', fit);
+fit();
+start('daily');
+</script>

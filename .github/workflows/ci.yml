@@ -19,6 +19,7 @@ jobs:
       - run: node services/hexroute/scripts/check-generator.mjs
       - run: node services/root-cause/scripts/check-puzzles.mjs
       - run: node services/flaky/scripts/check-generator.mjs
+      - run: node services/loom/scripts/check-generator.mjs
       - run: node services/web/scripts/check-track.mjs
 
   image:

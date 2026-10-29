@@ -30,7 +30,7 @@
 :root {
   --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
   --fg: #1A1611; --muted: #5A5346; --brand: #56744B; --accent-ink: #956C0A;
-  --bad: #C0492F; --bad-bg: #F6E1DA; --ok-bg: #E3EBDD; --blue: #3F63A8;
+  --bad: #C0492F; --bad-bg: #F6E1DA; --ok-bg: #E3EBDD; --blue: #3F63A8; --dye: #2F4A7A; --weft: #E9DCC3;
   --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
   --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
   --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -41,12 +41,12 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
   --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
-  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6;
+  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6; --dye: #5B7DC4; --weft: #D9C9A8;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
   --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
-  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6;
+  --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6; --dye: #5B7DC4; --weft: #D9C9A8;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
 /* Same column as the games: 600px, 20/48 vertical padding, 16px gutters. */
@@ -89,7 +89,11 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 @keyframes hx-spin { 0%, 14% { transform: rotate(120deg); } 22%, 36% { transform: rotate(60deg); } 44%, 86% { transform: rotate(0deg); } 94%, 100% { transform: rotate(120deg); } }
 @keyframes hx-wire { 0%, 45% { stroke: var(--wire); } 49%, 86% { stroke: var(--bad); } 92%, 100% { stroke: var(--wire); } }
 @keyframes hx-rcv { 0%, 49% { fill: var(--tile); } 53%, 86% { fill: var(--bad); } 92%, 100% { fill: var(--tile); } }
-@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .fl rect { opacity: 1; } .hx .spin { transform: none; } }
+.lm .w { fill: var(--dye); }
+.lm .f { fill: var(--weft); }
+.lm .mix { animation: lm-fix 6s infinite; animation-delay: calc(var(--d) * 0.22s); }
+@keyframes lm-fix { 0%, 6% { opacity: 1; } 10%, 78% { opacity: 0; } 86%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } }
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -110,6 +114,89 @@ footer a { color: inherit; }
   </header>
 
   <ul class="games">
+    <li><a class="game" href="/loom/" data-save="loom1-">
+      <div class="game-body">
+        <div class="game-top"><h2>Loom</h2><span class="tag">Weaving</span></div>
+        <p>Set the threads and treadles of a small loom so the cloth weaves the day's pattern. Every tap redraws the cloth.</p>
+      </div>
+      <svg class="preview lm" viewBox="0 0 120 80" shape-rendering="crispEdges" aria-hidden="true">
+        <rect class="w" x="7.5" y="8.5" width="10.5" height="10.5"/>
+        <rect class="w" x="18.0" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="28.5" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="39.0" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="49.5" y="8.5" width="10.5" height="10.5"/>
+        <rect class="w" x="60.0" y="8.5" width="10.5" height="10.5"/>
+        <rect class="w" x="70.5" y="8.5" width="10.5" height="10.5"/>
+        <rect class="w" x="81.0" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="91.5" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="102.0" y="8.5" width="10.5" height="10.5"/>
+        <rect class="f" x="7.5" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="18.0" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="28.5" y="19.0" width="10.5" height="10.5"/>
+        <rect class="f" x="39.0" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="49.5" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="60.0" y="19.0" width="10.5" height="10.5"/>
+        <rect class="f" x="70.5" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="81.0" y="19.0" width="10.5" height="10.5"/>
+        <rect class="w" x="91.5" y="19.0" width="10.5" height="10.5"/>
+        <rect class="f" x="102.0" y="19.0" width="10.5" height="10.5"/>
+        <rect class="f" x="7.5" y="29.5" width="10.5" height="10.5"/>
+        <rect class="f" x="18.0" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="28.5" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="39.0" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="49.5" y="29.5" width="10.5" height="10.5"/>
+        <rect class="f" x="60.0" y="29.5" width="10.5" height="10.5"/>
+        <rect class="f" x="70.5" y="29.5" width="10.5" height="10.5"/>
+        <rect class="f" x="81.0" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="91.5" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="102.0" y="29.5" width="10.5" height="10.5"/>
+        <rect class="w" x="7.5" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="18.0" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="28.5" y="40.0" width="10.5" height="10.5"/>
+        <rect class="w" x="39.0" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="49.5" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="60.0" y="40.0" width="10.5" height="10.5"/>
+        <rect class="w" x="70.5" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="81.0" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="91.5" y="40.0" width="10.5" height="10.5"/>
+        <rect class="w" x="102.0" y="40.0" width="10.5" height="10.5"/>
+        <rect class="f" x="7.5" y="50.5" width="10.5" height="10.5"/>
+        <rect class="f" x="18.0" y="50.5" width="10.5" height="10.5"/>
+        <rect class="w" x="28.5" y="50.5" width="10.5" height="10.5"/>
+        <rect class="w" x="39.0" y="50.5" width="10.5" height="10.5"/>
+        <rect class="w" x="49.5" y="50.5" width="10.5" height="10.5"/>
+        <rect class="f" x="60.0" y="50.5" width="10.5" height="10.5"/>
+        <rect class="f" x="70.5" y="50.5" width="10.5" height="10.5"/>
+        <rect class="f" x="81.0" y="50.5" width="10.5" height="10.5"/>
+        <rect class="w" x="91.5" y="50.5" width="10.5" height="10.5"/>
+        <rect class="w" x="102.0" y="50.5" width="10.5" height="10.5"/>
+        <rect class="f" x="7.5" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="18.0" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="28.5" y="61.0" width="10.5" height="10.5"/>
+        <rect class="f" x="39.0" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="49.5" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="60.0" y="61.0" width="10.5" height="10.5"/>
+        <rect class="f" x="70.5" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="81.0" y="61.0" width="10.5" height="10.5"/>
+        <rect class="w" x="91.5" y="61.0" width="10.5" height="10.5"/>
+        <rect class="f" x="102.0" y="61.0" width="10.5" height="10.5"/>
+        <rect class="mix f" x="70.5" y="8.5" width="10.5" height="10.5" style="--d:6"/>
+        <rect class="mix w" x="7.5" y="19.0" width="10.5" height="10.5" style="--d:0"/>
+        <rect class="mix f" x="28.5" y="19.0" width="10.5" height="10.5" style="--d:2"/>
+        <rect class="mix f" x="49.5" y="19.0" width="10.5" height="10.5" style="--d:4"/>
+        <rect class="mix f" x="91.5" y="19.0" width="10.5" height="10.5" style="--d:8"/>
+        <rect class="mix w" x="70.5" y="29.5" width="10.5" height="10.5" style="--d:6"/>
+        <rect class="mix f" x="7.5" y="40.0" width="10.5" height="10.5" style="--d:0"/>
+        <rect class="mix w" x="28.5" y="40.0" width="10.5" height="10.5" style="--d:2"/>
+        <rect class="mix w" x="49.5" y="40.0" width="10.5" height="10.5" style="--d:4"/>
+        <rect class="mix w" x="91.5" y="40.0" width="10.5" height="10.5" style="--d:8"/>
+        <rect class="mix w" x="7.5" y="50.5" width="10.5" height="10.5" style="--d:0"/>
+        <rect class="mix f" x="28.5" y="50.5" width="10.5" height="10.5" style="--d:2"/>
+        <rect class="mix f" x="49.5" y="50.5" width="10.5" height="10.5" style="--d:4"/>
+        <rect class="mix w" x="70.5" y="50.5" width="10.5" height="10.5" style="--d:6"/>
+        <rect class="mix f" x="91.5" y="50.5" width="10.5" height="10.5" style="--d:8"/>
+      </svg>
+    </a></li>
     <li><a class="game" href="/root-cause/" data-save="rootcause4-">
       <div class="game-body">
         <div class="game-top"><h2>Root Cause</h2><span class="tag">Incident</span></div>

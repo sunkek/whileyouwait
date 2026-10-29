@@ -6,6 +6,7 @@ Live: <https://whileyouwait.suncake.xyz>
 
 | Game | Path | What it is |
 |---|---|---|
+| [Loom](services/loom/README.md) | `/loom/` | Weaving puzzle: set threads and treadles so the cloth weaves the day's pattern |
 | [Root Cause](services/root-cause/README.md) | `/root-cause/` | Incident puzzle: find the broken services behind cascading alerts |
 | [Flaky](services/flaky/README.md) | `/flaky/` | Test-pollution puzzle: find hidden order dependencies in as little CI time as you can |
 | [Hexroute](services/hexroute/README.md) | `/hexroute/` | Rotate hex tiles to route additive RGB light |
@@ -52,6 +53,7 @@ Checks CI runs:
 node services/hexroute/scripts/check-generator.mjs
 node services/root-cause/scripts/check-puzzles.mjs
 node services/flaky/scripts/check-generator.mjs
+node services/loom/scripts/check-generator.mjs
 node services/web/scripts/check-track.mjs
 ```
 
