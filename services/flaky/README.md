@@ -7,11 +7,13 @@ earlier). You compose runs, any tests in any order, read which tests pass and
 fail, and name all three dependencies. Nothing moves until you act, so there
 is no time pressure: the score is CI time, against a greedy bot.
 
-Live: <https://flaky.suncake.xyz>
+Live: <https://whileyouwait.suncake.xyz/flaky/>, part of the
+[WhileYouWait](../../README.md) catalog.
 
-Single self-contained page: `index.html` holds the page body, and the image
-adds the document skeleton from `.docker/head.html`. Deployment is described in
-`deploy/README.md`.
+Single self-contained page: `index.html` holds the page body, and the
+catalog's image adds the document skeleton from `head.html`, which also loads
+the catalog's analytics. Deployment is described in `deploy/README.md` at the
+repository root.
 
 ## Authorship
 
@@ -42,14 +44,10 @@ design system.
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `node scripts/check-generator.mjs`
+See [CONTRIBUTING.md](../../CONTRIBUTING.md). `node scripts/check-generator.mjs`
 checks 100 suites against the rules and prints how ambiguous they start.
 
-## Status
-
-Toy, not a product. Same test as its siblings before any further work: share
-with 10-20 people and look for unprompted day-3 and day-7 returns.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](../../LICENSE).

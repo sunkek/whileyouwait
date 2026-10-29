@@ -8,11 +8,13 @@ logs or attempt fixes to find the root causes. Only actions move the clock, so
 there is no time pressure: the score is user-facing downtime in user-minutes,
 against a par set by the optimal strategy.
 
-Live: <https://rootcause.suncake.xyz>
+Live: <https://whileyouwait.suncake.xyz/root-cause/>, part of the
+[WhileYouWait](../../README.md) catalog.
 
-Single self-contained page: `index.html` holds the page body, and the image
-adds the document skeleton from `.docker/head.html`. Deployment is described in
-`deploy/README.md`.
+Single self-contained page: `index.html` holds the page body, and the
+catalog's image adds the document skeleton from `head.html`, which also loads
+the catalog's analytics. Deployment is described in `deploy/README.md` at the
+repository root.
 
 ## Authorship
 
@@ -54,9 +56,9 @@ where and how it is hosted and deployed.
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `node scripts/check-puzzles.mjs` checks
+See [CONTRIBUTING.md](../../CONTRIBUTING.md). `node scripts/check-puzzles.mjs` checks
 every precomputed incident against the rules.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](../../LICENSE).

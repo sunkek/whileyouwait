@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Each game checks its own rules from its index.html; track.js is checked
+  # against a fake page. Node ships on the runner image and every check uses
+  # only node: built-ins.
+  games:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: node services/hexroute/scripts/check-generator.mjs
+      - run: node services/root-cause/scripts/check-puzzles.mjs
+      - run: node services/flaky/scripts/check-generator.mjs
+      - run: node services/web/scripts/check-track.mjs
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -f services/web/.docker/Dockerfile -t whileyouwait-web:ci services
+
+  # The repository ships bash: scripts/ carries the env-file and secret
+  # handling. shellcheck is preinstalled on GitHub runners, so this costs a few
+  # seconds.
+  #
+  # Severity is `warning`: info-level notes here are style opinions
+  # (SC2012, SC2015), and a lint that fires on taste gets ignored, not fixed.
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: shellcheck
+        run: shellcheck -x -S warning scripts/*.sh
+
+  # Secrets hygiene. Runs everywhere, needs no age key and cannot decrypt
+  # anything: both questions below are answerable from the ciphertext and the
+  # index alone. A check that only runs on a laptop catches the mistake after
+  # the commit that matters.
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: nothing under env/sops/ is plaintext
+        run: make secrets-check
+      - name: no plaintext env file is tracked
+        run: |
+          # Split so that a failing git fails the job instead of reading as clean.
+          files="$(git ls-files 'env/*')" || exit 1
+          tracked="$(printf '%s\n' "$files" | grep -Ev '^env/(example|sops)/' || true)"
+          if [ -n "$tracked" ]; then
+            echo "These plaintext env files are tracked by git:" >&2
+            echo "$tracked" >&2
+            echo "Move them under env/<env>/ (git-ignored) and commit the ciphertext" >&2
+            echo "from env/sops/ instead. If any of them ever reached a remote," >&2
+            echo "rotate the values -- deleting the file does not remove it from history." >&2
+            exit 1
+          fi
+

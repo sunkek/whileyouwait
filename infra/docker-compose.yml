@@ -1,0 +1,87 @@
+# Base stack: infra (always) + app services (behind the "app" profile).
+# Per-environment specifics — build target, source mounts, published ports,
+# healthchecks — live in docker-compose.<env>.yml overrides, merged via
+#   docker compose -f docker-compose.yml -f docker-compose.$ENVIRONMENT.yml ...
+# (see `make up`). Container and volume names are scoped by $ENVIRONMENT so
+# multiple environments don't collide; services reach each other by stable
+# network aliases, never by container name.
+networks:
+  dev:
+    external: true
+
+volumes:
+  postgresql_data:
+    name: whileyouwait_postgresql_data_${ENVIRONMENT:-dev}
+
+services:
+  postgresql:
+    image: postgres:18
+    container_name: whileyouwait_postgresql_${ENVIRONMENT:-dev}
+    restart: unless-stopped
+    expose:
+      - 5432
+    ports:
+      - "127.0.0.1:${WHILEYOUWAIT_PG_PORT:-5432}:5432"
+    env_file:
+      - ../env/${ENVIRONMENT:-dev}/postgresql.env
+    networks:
+      dev:
+        aliases:
+          - postgresql
+    volumes:
+      - postgresql_data:/var/lib/postgresql
+      - ./postgresql/init/01-create-app-user-db.sh:/docker-entrypoint-initdb.d/01-create-app-user-db.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "$$POSTGRES_DB", "-U", "$$POSTGRES_USER"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+    labels:
+      - traefik.enable=false
+
+  # App services: common wiring here, env-specific build/ports/mounts in the
+  # override. Behind the "app" profile so `make run` starts only infra;
+  # `make up` passes --profile app.
+
+  # Umami keeps its own schema in APP_DB and migrates it on start. The
+  # dashboard is never routed publicly; open it on the host-side port.
+  umami:
+    profiles: ["app"]
+    image: ghcr.io/umami-software/umami:3.4.1
+    container_name: whileyouwait_umami_${ENVIRONMENT:-dev}
+    restart: unless-stopped
+    env_file:
+      - ../env/${ENVIRONMENT:-dev}/umami.env
+    environment:
+      # APP_* come from postgresql.env, which the Makefile sources before compose.
+      DATABASE_URL: postgresql://${APP_USER:?}:${APP_PASSWORD:?}@postgresql:5432/${APP_DB:?}
+      TRACKER_SCRIPT_NAME: s.js
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      dev:
+        aliases:
+          - umami
+    labels:
+      - traefik.enable=false
+
+  # Catalog and games, one nginx image. UMAMI_WEBSITE_ID is empty until a
+  # website exists in Umami; set it in env/<env>/web.env.
+  web:
+    profiles: ["app"]
+    build:
+      context: ../services
+      dockerfile: web/.docker/Dockerfile
+    container_name: whileyouwait_web_${ENVIRONMENT:-dev}
+    restart: unless-stopped
+    env_file:
+      - ../env/${ENVIRONMENT:-dev}/web.env
+    networks:
+      dev:
+        aliases:
+          - web
+    labels:
+      - traefik.enable=false

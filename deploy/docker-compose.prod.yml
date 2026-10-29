@@ -1,0 +1,76 @@
+# WhileYouWait production stack, run from /opt/whileyouwait on the host behind
+# its shared Traefik (external network `traefik`, resolver `letsencrypt`).
+#
+# .env next to this file (mode 600) holds the secrets, the Umami website ID and
+# the web image tag (the tag is rewritten by CI on every deploy):
+#   POSTGRES_PASSWORD=...  UMAMI_APP_SECRET=...  UMAMI_WEBSITE_ID=<uuid>
+#   WEB_TAG=<sha>
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d --wait
+name: whileyouwait
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: whileyouwait_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "umami", "-d", "umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Migrates its own schema on start. The dashboard is not routed through
+  # Traefik: it listens on the host's loopback only, reached over an SSH tunnel
+  # (deploy/README.md). Only the tracker and the collect endpoint are public,
+  # proxied by web.
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.1
+    container_name: whileyouwait_umami
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://umami:${POSTGRES_PASSWORD:?}@postgres:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?}
+      TRACKER_SCRIPT_NAME: s.js
+      DISABLE_TELEMETRY: "1"
+      # Cloudflare sits in front; without this every visitor is a Cloudflare IP.
+      CLIENT_IP_HEADER: cf-connecting-ip
+    ports:
+      - "127.0.0.1:3901:3000"
+
+  # The only service on the shared `traefik` network. It reaches umami over
+  # this project's own default network.
+  web:
+    image: ghcr.io/sunkek/whileyouwait-web:${WEB_TAG:-latest}
+    container_name: whileyouwait_web
+    restart: unless-stopped
+    environment:
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+    networks:
+      - default
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik
+      traefik.http.routers.whileyouwait.rule: Host(`whileyouwait.suncake.xyz`)
+      traefik.http.routers.whileyouwait.entrypoints: websecure
+      traefik.http.routers.whileyouwait.tls.certresolver: letsencrypt
+      traefik.http.services.whileyouwait.loadbalancer.server.port: "80"
+
+volumes:
+  postgres-data:
+
+networks:
+  traefik:
+    external: true

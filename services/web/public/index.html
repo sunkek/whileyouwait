@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WhileYouWait</title>
+<meta name="description" content="Daily deduction puzzles for developers, for while the build runs. No timers.">
+<meta property="og:title" content="WhileYouWait">
+<meta property="og:description" content="Daily deduction puzzles for developers, for while the build runs. No timers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="/shared/config.js"></script>
+<script src="/shared/track.js"></script>
+<style>
+/* Same tokens as the games: the nikita zotov design system (warm stone, sage brand, amber accent, IBM Plex). */
+:root {
+  --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
+  --fg: #1A1611; --muted: #5A5346; --brand: #56744B; --accent-ink: #956C0A;
+  --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
+  --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-lg: 8px; --ease: cubic-bezier(0.2, 0, 0, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
+  --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 640px; margin: 0 auto; padding: 48px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 28px; }
+.eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
+h1 { font-weight: 600; font-size: 34px; letter-spacing: -0.02em; margin: 4px 0 6px; }
+.lede { color: var(--muted); margin: 0; max-width: 46ch; }
+.games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
+.game:hover { border-color: var(--wire); }
+.game:active { transform: translateY(0.5px); }
+.game:focus-visible { outline: none; box-shadow: var(--ring); }
+.game-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.game h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.game p { margin: 6px 0 0; color: var(--muted); }
+.tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+.tag.done { color: var(--brand); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+footer a { color: inherit; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Daily puzzles · no timers</div>
+    <h1>WhileYouWait</h1>
+    <p class="lede">Deduction puzzles for developers, for while the build runs. A new one of each every day, and you can take as long as you like.</p>
+  </header>
+
+  <ul class="games">
+    <li><a class="game" href="/root-cause/" data-save="rootcause4-">
+      <div class="game-top"><h2>Root Cause</h2><span class="tag">Incident</span></div>
+      <p>Alerts cascade through a service graph. Check logs and attempt fixes to find which services actually broke, before the downtime adds up.</p>
+    </a></li>
+    <li><a class="game" href="/flaky/" data-save="flaky1-">
+      <div class="game-top"><h2>Flaky</h2><span class="tag">Test suite</span></div>
+      <p>CI is red because of hidden order dependencies between tests. Design runs to find them in as little CI time as you can.</p>
+    </a></li>
+    <li><a class="game" href="/hexroute/" data-save="hexroute-">
+      <div class="game-top"><h2>Hexroute</h2><span class="tag">Light routing</span></div>
+      <p>Rotate hex tiles to route red, green and blue light so each receiver gets exactly its colour.</p>
+    </a></li>
+  </ul>
+
+  <footer>
+    Built by Claude (Anthropic's coding agent), with Nikita Zotov directing.
+    Progress stays in your browser; visits are counted without cookies.
+    <a href="https://github.com/sunkek/whileyouwait">Source</a>.
+  </footer>
+</div>
+
+<script>
+// Mark the games already started today, from their own saves.
+const d = new Date();
+const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+document.querySelectorAll('.game').forEach(a => {
+  let started = false;
+  try { started = localStorage.getItem(a.dataset.save + today) !== null; } catch (e) {}
+  if (!started) return;
+  const tag = a.querySelector('.tag');
+  tag.textContent = 'Played today';
+  tag.classList.add('done');
+});
+</script>

@@ -1,0 +1,10 @@
+# Dev override, merged on top of docker-compose.yml. Publishes the site and the
+# Umami dashboard on loopback; ports come from env/dev/ports.env. Pages are
+# baked into the image, so rerun `make up` after editing one.
+services:
+  umami:
+    ports:
+      - "127.0.0.1:${WHILEYOUWAIT_UMAMI_PORT:-3901}:3000"
+  web:
+    ports:
+      - "127.0.0.1:${WHILEYOUWAIT_WEB_PORT:-8080}:80"

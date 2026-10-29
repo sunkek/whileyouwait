@@ -1,0 +1,47 @@
+# Rendered by the nginx image's envsubst step at container start, so
+# ${UMAMI_WEBSITE_ID} below is filled from the environment. Only variables that
+# exist in the environment are substituted; nginx's own $variables are left alone.
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    # Redirects stay relative: behind Traefik nginx does not know the public host.
+    absolute_redirect off;
+
+    gzip on;
+    gzip_types text/html application/javascript text/css;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location = /shared/config.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-cache";
+        return 200 'window.WYW_SITE = "${UMAMI_WEBSITE_ID}";\n';
+    }
+
+    # Umami, proxied so the tracker is a first-party script on this origin.
+    # A variable in proxy_pass makes nginx resolve `umami` per request through
+    # Docker's DNS, so nginx starts without Umami and survives its restarts;
+    # analytics then fail on their own and the games keep working.
+    resolver 127.0.0.11 valid=30s ipv6=off;
+    set $umami http://umami:3000;
+
+    location = /a/s.js {
+        proxy_pass $umami/s.js;
+        proxy_set_header Host $host;
+    }
+
+    location = /a/api/send {
+        proxy_pass $umami/api/send;
+        proxy_set_header Host $host;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "no-cache";
+    }
+}

@@ -1,0 +1,39 @@
+name: puzzles
+
+# Keeps Root Cause's daily incidents running ahead. Weekly, appends new days so
+# the list covers 90 days past today, drops days older than a week, and commits
+# services/root-cause/puzzles.js. Existing days are never regenerated (see
+# services/root-cause/scripts/build-puzzles.mjs). A push made with GITHUB_TOKEN
+# does not start other workflows, so this one dispatches the image build, which
+# deploys.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency: puzzles
+
+jobs:
+  extend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: node services/root-cause/scripts/build-puzzles.mjs extend 90 "$(nproc)"
+      - run: node services/root-cause/scripts/check-puzzles.mjs
+      - name: Commit and deploy if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- services/root-cause/puzzles.js; then
+            echo "No change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(root-cause): extend daily incidents" -- services/root-cause/puzzles.js
+          git push
+          gh workflow run images.yml --ref main

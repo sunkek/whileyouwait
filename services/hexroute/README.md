@@ -5,11 +5,13 @@ sources to receivers. Signals that share a network mix additively, so each
 receiver must end up on a network carrying exactly its colour, with no loose
 line ends.
 
-Live: <https://hexroute.suncake.xyz>
+Live: <https://whileyouwait.suncake.xyz/hexroute/>, part of the
+[WhileYouWait](../../README.md) catalog.
 
-Single self-contained page: `index.html` holds the page body, and the image
-adds the document skeleton from `.docker/head.html`. Deployment is described in
-`deploy/README.md`.
+Single self-contained page: `index.html` holds the page body, and the
+catalog's image adds the document skeleton from `head.html`, which also loads
+the catalog's analytics. Deployment is described in `deploy/README.md` at the
+repository root.
 
 ## Authorship
 
@@ -30,14 +32,10 @@ and how it is hosted and deployed.
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `node scripts/check-generator.mjs` checks
+See [CONTRIBUTING.md](../../CONTRIBUTING.md). `node scripts/check-generator.mjs` checks
 that generated puzzles are solvable.
 
-## Status
-
-Toy, not a product. Next test: share with 10-20 people and check unprompted
-day-3 and day-7 returns before considering a mobile port.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](../../LICENSE).
