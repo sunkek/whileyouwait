@@ -23,6 +23,7 @@ jobs:
       - run: node services/poise/scripts/check-generator.mjs
       - run: node services/runoff/scripts/check-generator.mjs
       - run: node services/web/scripts/check-track.mjs
+      - run: node services/web/scripts/check-daily.mjs
 
   image:
     runs-on: ubuntu-latest
