@@ -351,7 +351,7 @@ function verdict() {
 function shareText() {
   const head = mode === 'daily' ? `Flaky #${dailyNo}` : 'Flaky practice';
   const grid = S.runs.slice(1).map(r => r.run.map(t => r.fail >> t & 1 ? '🟥' : '🟩').join('')).join('\n');
-  return `${head} · ${S.verdict ? S.cost + 's' : '✗'} · bot ${BOT ? BOT.cost + 's' : '?'}\n${grid}\n${location.origin}/flaky/`;
+  return `${head} · ${S.verdict ? S.cost + 's' : '✗'} · bot ${BOT ? BOT.cost + 's' : '?'}\n${grid}\n${Stats.link('flaky')}`;
 }
 
 function showResult() {

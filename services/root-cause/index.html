@@ -440,7 +440,8 @@ function verdict(d) {
 function shareText() {
   const d = S.down - P.par;
   const head = mode === 'daily' ? `Root Cause #${dailyNo}` : 'Root Cause practice';
-  return `${head} · ${S.down} user-min · par ${P.par} (${d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d)})\n${S.checks} check${S.checks === 1 ? '' : 's'} · ${S.fixed + S.wasted} fix${S.fixed + S.wasted === 1 ? '' : 'es'} · ${S.wasted} wasted\n${location.origin}/root-cause/`;
+  const steps = S.actions.map(([k]) => k === 'check' ? '🔎' : '🔧').join('');
+  return `${head} · ${S.down} user-min · par ${P.par} (${d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d)})\n${steps}\n${S.checks} check${S.checks === 1 ? '' : 's'} · ${S.fixed + S.wasted} fix${S.fixed + S.wasted === 1 ? '' : 'es'} · ${S.wasted} wasted\n${Stats.link('root-cause')}`;
 }
 
 function showResult() {

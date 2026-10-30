@@ -375,8 +375,8 @@ const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
 function shareText() {
   const d = game.moves - game.par;
   return mode === 'daily'
-    ? `Hexroute #${dailyNo} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}\n${location.origin}/hexroute/`
-    : `Hexroute practice · ${game.level} · ${fmtScore(d)}\n${game.moves} moves · par ${game.par}\n${location.origin}/hexroute/`;
+    ? `Hexroute #${dailyNo} · ${fmtScore(d)}\n${Stats.bar(game.moves, game.par, '🟩')}\n${game.moves} moves · par ${game.par}\n${Stats.link('hexroute')}`
+    : `Hexroute practice · ${game.level} · ${fmtScore(d)}\n${Stats.bar(game.moves, game.par, '🟩')}\n${game.moves} moves · par ${game.par}\n${Stats.link('hexroute')}`;
 }
 function showResult() {
   const box = document.getElementById('result');

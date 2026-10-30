@@ -59,3 +59,6 @@ const list = items => items.map(m => `${clean(m.x)} ${clean(m.y)}`).join(', ');
 console.log('  ' + list(await metric('country')));
 console.log('  ' + list(await metric('device')));
 console.log('  referrers: ' + (list(await metric('referrer')) || 'none recorded'));
+// Share texts link with ?ref=share, so this is how many visits the share loop brings.
+const queries = await metric('query').catch(() => []);
+console.log('  from a shared result: ' + queries.filter(m => /ref=share/.test(m.x)).reduce((n, m) => n + m.y, 0));

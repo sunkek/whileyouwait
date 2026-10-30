@@ -1,8 +1,9 @@
 // The player's own record, kept in this browser only: daily results, favorites and ratings. No account, no cookie and
 // no visitor ID. A rating also goes to the analytics as an anonymous event, which is how a game's ratings get counted.
 //
-// A game calls Stats.finish once its result is on screen; it may call it again, because the first result of a day
-// stands. Add a new game to GAMES, or the stats page won't list it.
+// A game calls Stats.finish once its result and share text are on screen; it may call it again, because the first
+// result of a day stands. Add a new game to GAMES, or the stats page won't list it. Share texts are built with bar and
+// link below: they show how a run went without giving the day's answer away.
 const Stats = (() => {
   const KEY = 'wyw-stats';
   const GAMES = [['timber', 'Timber'], ['runoff', 'Runoff'], ['poise', 'Poise'], ['loom', 'Loom'],
@@ -18,14 +19,39 @@ const Stats = (() => {
   const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const nextDay = key => { const [y, m, d] = key.split('-').map(Number); return dayKey(new Date(y, m - 1, d + 1)); };
 
+  // A run against par as a row of squares, one per move, and red past par. Long games scale so par is ten squares.
+  function bar(used, par, mark) {
+    const scale = par > 12 ? 10 / par : 1, within = Math.max(1, Math.round(Math.min(used, par) * scale));
+    return mark.repeat(within) + '🟥'.repeat(Math.min(10, Math.ceil(Math.max(0, used - par) * scale)));
+  }
+  // The address that goes in a share text. The ref shows in the analytics how many visits shares bring.
+  const link = game => `${location.origin}/${game}/?ref=share`;
+
   // Record today's daily: score is the result against par (0 at par), or null when it earned no par credit.
-  // Then offer the rating, on practice boards too.
+  // Then fit the share box to its text and offer sharing and the rating, on practice boards too.
   function finish(game, daily, score) {
     if (daily) {
       const s = read(), days = s.results[game] = s.results[game] || {}, today = dayKey(new Date());
       if (!(today in days)) { days[today] = score; write(s); }
     }
+    const text = document.getElementById('r-share');
+    if (text) text.rows = text.value.split('\n').length;
+    offerShare(text);
     offerRating(game);
+  }
+
+  // Phones have a share sheet, which is one tap instead of a copy and a paste. Closing it counts as a rejection, so
+  // that's ignored.
+  function offerShare(text) {
+    const copy = document.getElementById('copy');
+    if (!text || !copy || !navigator.share || document.getElementById('share')) return;
+    const b = document.createElement('button');
+    b.id = 'share';
+    b.className = 'btn primary';
+    b.textContent = 'Share';
+    b.onclick = () => navigator.share({ text: text.value }).catch(() => {});
+    copy.classList.remove('primary');
+    copy.before(b);
   }
 
   function rate(game, value) {
@@ -82,5 +108,5 @@ const Stats = (() => {
     return { games, days: days.length, finished, atPar, run: alive ? run : 0, bestRun: best };
   }
 
-  return { GAMES, finish, favorites, toggleFavorite, summary };
+  return { GAMES, finish, bar, link, favorites, toggleFavorite, summary };
 })();

@@ -274,8 +274,8 @@ function render() {
   if (game.solved) {
     const d = game.swaps - game.par;
     $('r-title').textContent = d === 0 ? 'Level in the fewest swaps.' : `Level, ${fmtScore(d)} over the fewest.`;
-    Stats.finish('poise', mode === 'daily', d);
     $('r-share').value = shareText();
+    Stats.finish('poise', mode === 'daily', d);
     $('next').hidden = mode !== 'practice';
     $('note').textContent = '';
   }
@@ -321,7 +321,7 @@ function restore() {
 const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
 function shareText() {
   const head = mode === 'daily' ? `Poise #${dailyNo}` : 'Poise practice';
-  return `${head} · ${fmtScore(game.swaps - game.par)}\n${game.swaps} swaps · fewest ${game.par}\n${location.origin}/poise/`;
+  return `${head} · ${fmtScore(game.swaps - game.par)}\n${Stats.bar(game.swaps, game.par, '🟨')}\n${game.swaps} swaps · fewest ${game.par}\n${Stats.link('poise')}`;
 }
 
 function start(newMode) {

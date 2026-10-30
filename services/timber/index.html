@@ -278,8 +278,8 @@ function render() {
   if (done) {
     const d = game.count - game.par;
     $('r-title').textContent = d === 0 ? 'Path laid at par. Every push counted.' : `Path laid, ${fmtScore(d)} over par.`;
-    Stats.finish('timber', mode === 'daily', d);
     $('r-share').value = shareText();
+    Stats.finish('timber', mode === 'daily', d);
     $('next').hidden = mode !== 'practice';
   }
 }
@@ -367,7 +367,18 @@ $('board').addEventListener('pointerup', e => {
 
 // ---------- modes, persistence, sharing ----------
 const dailyNo = Daily.number(PUZZLES.epoch), store = Daily.store('timber1-'), { fmtScore } = Daily;
-const shareText = () => `${mode === 'daily' ? `Timber #${dailyNo}` : 'Timber practice'} · ${fmtScore(game.count - game.par)}\n${game.count} pushes · par ${game.par}\n${location.origin}/timber/`;
+// One row per push and one block per block it brought down: it shows the chains, not where they were.
+function pushRows() {
+  let rows = [], before = 0;
+  for (const s of [...game.history, game.st]) {
+    const down = s.fallen.filter(Boolean).length;
+    if (down < before) rows = [];
+    else if (down > before) rows.push('🟧'.repeat(down - before));
+    before = down;
+  }
+  return rows.join('\n');
+}
+const shareText = () => `${mode === 'daily' ? `Timber #${dailyNo}` : 'Timber practice'} · ${fmtScore(game.count - game.par)}\n${pushRows()}\n${game.count} pushes · par ${game.par}\n${Stats.link('timber')}`;
 
 function save() {
   if (mode !== 'daily') return;

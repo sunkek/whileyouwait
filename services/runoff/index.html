@@ -482,8 +482,8 @@ function render() {
   if (game.solved) {
     const d = game.moves - game.par;
     $('r-title').textContent = d < 0 ? `Done in ${game.moves}, under par. You found a shorter way than the search.` : d === 0 ? 'Done in par.' : `Done, ${fmtScore(d)} over par.`;
-    Stats.finish('runoff', mode === 'daily', d);
     $('r-share').value = shareText();
+    Stats.finish('runoff', mode === 'daily', d);
     $('next').hidden = mode !== 'practice';
     $('note').textContent = '';
   }
@@ -561,7 +561,7 @@ function restore() {
 const fmtScore = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
 function shareText() {
   const head = mode === 'daily' ? `Runoff #${dailyNo}` : 'Runoff practice';
-  return `${head} · ${fmtScore(game.moves - game.par)}\n${game.moves} shoves · par ${game.par}\n${location.origin}/runoff/`;
+  return `${head} · ${fmtScore(game.moves - game.par)}\n${Stats.bar(game.moves, game.par, '🟦')}\n${game.moves} shoves · par ${game.par}\n${Stats.link('runoff')}`;
 }
 
 function start(newMode) {

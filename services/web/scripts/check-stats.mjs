@@ -36,6 +36,11 @@ assert.equal(runs([0, 2, 3, 4]).bestRun, 3);
 assert.equal(runs([0, 2, 3, 4]).run, 1);
 
 S = load(store);
+assert.equal(S.bar(4, 4, '🟦'), '🟦🟦🟦🟦');
+assert.equal(S.bar(6, 4, '🟦'), '🟦🟦🟦🟦🟥🟥');
+assert.equal(S.bar(40, 40, '🟩'), '🟩'.repeat(10), 'long games scale to ten squares');
+assert.equal(S.bar(41, 40, '🟩'), '🟩'.repeat(10) + '🟥', 'a move over par always shows');
+assert.equal(S.bar(400, 40, '🟩'), '🟩'.repeat(10) + '🟥'.repeat(10), 'red is capped');
 assert.equal(S.toggleFavorite('loom'), true);
 assert.deepEqual([...S.favorites()], ['loom']);
 assert.equal(S.toggleFavorite('loom'), false);
