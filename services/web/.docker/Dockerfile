@@ -11,12 +11,16 @@ COPY flaky/head.html flaky/index.html /tmp/games/flaky/
 COPY loom/head.html loom/index.html /tmp/games/loom/
 COPY poise/head.html poise/index.html /tmp/games/poise/
 COPY runoff/head.html runoff/index.html /tmp/games/runoff/
-RUN set -e; cd /tmp/games; for g in *; do \
+# The service worker's precache list is then filled with every game's files.
+RUN set -e; cd /tmp/games; games="$(echo *)"; for g in $games; do \
       mkdir -p "/usr/share/nginx/html/$g"; \
       cat "$g/head.html" "$g/index.html" > "/usr/share/nginx/html/$g/index.html"; \
       rm "$g/head.html" "$g/index.html"; \
       cp -r "$g/." "/usr/share/nginx/html/$g/"; \
-    done; rm -r /tmp/games
+    done; rm -r /tmp/games; \
+    cd /usr/share/nginx/html; \
+    list="$(find $games -type f | sort | sed -e 's|index\.html$||' -e "s|.*|'/&'|" | paste -sd, -)"; \
+    sed -i "s|/\* GAMES \*/|$list|" sw.js; grep -q "'/runoff/'" sw.js
 # Empty until the Umami website exists; without it the pages load no tracker.
 ENV UMAMI_WEBSITE_ID=""
 EXPOSE 80

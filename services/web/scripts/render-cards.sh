@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Renders the social cards (public/og/*.png, 1200x630) and the Apple touch icon
-# from cards/card.html and cards/touch-icon.html with headless Chrome. The PNGs
-# are committed; rerun this after changing a page's name or pitch.
+# Renders the social cards (public/og/*.png, 1200x630) and the app icons (Apple
+# touch icon, manifest icons) from cards/card.html and cards/touch-icon.html with
+# headless Chrome. The PNGs are committed; rerun this after changing a page's
+# name or pitch.
 #   services/web/scripts/render-cards.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -37,3 +38,5 @@ card flaky "Daily test-suite puzzle" "Flaky" \
 card hexroute "Daily light-routing puzzle" "Hexroute" \
   "Rotate hex tiles to route red, green and blue light so each receiver gets exactly its colour."
 shot public/apple-touch-icon.png 180 180 "file://$PWD/cards/touch-icon.html"
+shot public/icon-192.png 192 192 "file://$PWD/cards/touch-icon.html"
+shot public/icon-512.png 512 512 "file://$PWD/cards/touch-icon.html"
