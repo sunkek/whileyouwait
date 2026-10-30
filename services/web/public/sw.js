@@ -7,7 +7,7 @@ const CACHE = 'wyw-1';
 // Every game's files, filled in by the Dockerfile when the image is built.
 const GAMES = [/* GAMES */];
 const PRECACHE = ['/', '/404.html', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png',
-  '/shared/game.css', '/shared/config.js', '/shared/track.js', '/shared/offline.js', '/shared/daily.js', ...GAMES];
+  '/shared/game.css', '/shared/config.js', '/shared/track.js', '/shared/offline.js', '/shared/daily.js', '/shared/stats.js', '/stats/', ...GAMES];
 // How long a slow network gets before a cached copy is used instead.
 const PATIENCE = 3000;
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];

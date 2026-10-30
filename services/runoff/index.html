@@ -482,6 +482,7 @@ function render() {
   if (game.solved) {
     const d = game.moves - game.par;
     $('r-title').textContent = d < 0 ? `Done in ${game.moves}, under par. You found a shorter way than the search.` : d === 0 ? 'Done in par.' : `Done, ${fmtScore(d)} over par.`;
+    Stats.finish('runoff', mode === 'daily', d);
     $('r-share').value = shareText();
     $('next').hidden = mode !== 'practice';
     $('note').textContent = '';

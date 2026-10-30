@@ -321,6 +321,7 @@ function showResult() {
     d < 0 ? `Woven under par: ${fmtScore(d)}. You found a shorter setup than the scramble.` :
     d === 0 ? 'Woven at par. Every tap counted.' : `Woven, ${fmtScore(d)} over par.`;
   $('r-share').value = shareText();
+  Stats.finish('loom', mode === 'daily', game.assisted ? null : d);
   $('next').hidden = mode !== 'practice';
 }
 

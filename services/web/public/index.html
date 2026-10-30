@@ -26,6 +26,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="/shared/stats.js"></script>
 <script src="/shared/config.js"></script>
 <script src="/shared/track.js"></script>
 <style>
@@ -151,6 +152,14 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .game p { margin: 6px 0 0; color: var(--muted); }
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .tag.done { color: var(--brand); }
+.games li { position: relative; }
+.star { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+.star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.star:hover { color: var(--accent-ink); }
+.star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
+.star:focus-visible { outline: none; box-shadow: var(--ring); }
+.your-stats { align-self: flex-start; font: 500 12px var(--font-mono); color: var(--muted); }
+.your-stats:hover { color: var(--fg); }
 footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
 footer a { color: inherit; }
 </style>
@@ -161,6 +170,8 @@ footer a { color: inherit; }
     <h1>WhileYouWait</h1>
     <p class="lede">Small games for any wait: the build, the commute, the queue. A new one of each every day, and you can take as long as you like.</p>
   </header>
+
+  <a class="your-stats" href="/stats/">Your stats →</a>
 
   <ul class="games">
     <li><a class="game" href="/timber/" data-save="timber1-">
@@ -355,7 +366,7 @@ footer a { color: inherit; }
   </ul>
 
   <footer>
-    Progress stays in your browser; visits are counted without cookies.
+    Progress, stats and favorites stay in your browser; visits and ratings are counted without cookies.
     <a href="https://github.com/sunkek/whileyouwait">Source</a>.
   </footer>
 </div>
@@ -372,4 +383,23 @@ document.querySelectorAll('.game').forEach(a => {
   tag.textContent = 'Played today';
   tag.classList.add('done');
 });
+
+// A star on every card; favorites move to the top, in catalog order.
+const list = document.querySelector('.games'), items = [...list.children];
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.8l6-.8z"/></svg>';
+const arrange = () => {
+  const fav = Stats.favorites(), rank = li => fav.includes(li.dataset.id) ? 0 : 1;
+  [...items].sort((a, b) => rank(a) - rank(b)).forEach(li => list.append(li));
+};
+items.forEach(li => {
+  const a = li.querySelector('.game'), id = a.getAttribute('href').slice(1, -1), name = a.querySelector('h2').textContent, star = document.createElement('button');
+  li.dataset.id = id;
+  star.className = 'star';
+  star.innerHTML = STAR;
+  star.setAttribute('aria-label', `Favorite ${name}`);
+  star.setAttribute('aria-pressed', Stats.favorites().includes(id));
+  star.onclick = () => { star.setAttribute('aria-pressed', Stats.toggleFavorite(id)); arrange(); };
+  li.append(star);
+});
+arrange();
 </script>

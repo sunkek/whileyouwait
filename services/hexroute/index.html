@@ -387,6 +387,7 @@ function showResult() {
     d < 0 ? `Solved under par: ${fmtScore(d)}. You found a shorter route than the generator.` :
     d === 0 ? 'Solved at par. Every tap counted.' : `Solved, ${fmtScore(d)} over par.`;
   document.getElementById('r-share').value = shareText();
+  Stats.finish('hexroute', mode === 'daily', d);
   document.getElementById('next').hidden = mode !== 'practice';
   svg.classList.add('solved');
 }

@@ -31,6 +31,11 @@ supplied the design system, and decided how the site is hosted and measured.
 - **No backend.** Progress lives in the player's `localStorage`, keyed per game
   and per day, and is saved after every move, so a wait that ends mid-puzzle
   resumes where it stopped.
+- **Your stats, with no account.** `services/web/public/shared/stats.js` keeps
+  daily results, favorites and ratings in `localStorage`. `/stats/` shows them,
+  and the catalog stars and sorts favorites. A rating is also sent as an
+  anonymous `rate` event. Nothing leaves the browser otherwise, so it all stays
+  on one device.
 - **Works offline.** A service worker (`services/web/public/sw.js`) caches the
   catalog and every game on the first visit, so all of them load without
   signal. It fetches from the network first, so a deploy shows up on the next
@@ -67,6 +72,8 @@ node services/poise/scripts/check-generator.mjs
 node services/runoff/scripts/check-generator.mjs
 node services/timber/scripts/check-generator.mjs
 node services/web/scripts/check-track.mjs
+node services/web/scripts/check-daily.mjs
+node services/web/scripts/check-stats.mjs
 ```
 
 ## Layout

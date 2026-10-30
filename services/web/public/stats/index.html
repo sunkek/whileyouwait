@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your stats · WhileYouWait</title>
+<meta name="description" content="Your daily results across every WhileYouWait game, kept in this browser.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FAF8F3">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<script src="/shared/offline.js" defer></script>
+<script src="/shared/config.js"></script>
+<script src="/shared/track.js"></script>
+<script src="/shared/stats.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/shared/game.css">
+<style>
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); text-align: right; padding: 6px 0 6px 12px; }
+td { padding: 10px 0 10px 12px; text-align: right; border-top: 1px solid var(--line); font-family: var(--font-mono); }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+td:first-child { font-family: var(--font-body); font-weight: 500; }
+td a { color: inherit; text-decoration: none; } td a:hover { text-decoration: underline; }
+td.none { color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow">Stored in this browser</div>
+      <h1>Your stats</h1>
+    </div>
+  </header>
+  <div class="stats">
+    <div class="stat"><b id="s-days">0</b><small>Days</small></div>
+    <div class="stat"><b id="s-finished">0</b><small>Finished</small></div>
+    <div class="stat"><b id="s-par">–</b><small>At par</small></div>
+    <div class="stat"><b id="s-run">0</b><small>Run</small></div>
+  </div>
+  <p class="note" id="empty" hidden>Nothing here yet. Finish today's daily in any game and it will show up.</p>
+  <table id="table" hidden>
+    <thead><tr><th scope="col">Game</th><th scope="col">Played</th><th scope="col">At par</th><th scope="col">Best</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="note">Run counts the days in a row you finished a daily; your longest is <span id="s-best">0</span>. Best is your closest result to par: E is at par, +2 is two over. Only dailies count, and they stay on this device, so clearing your browser data removes them.</p>
+</div>
+
+<script>
+const { games, days, finished, atPar, run, bestRun } = Stats.summary();
+const $ = id => document.getElementById(id);
+const fmt = d => d === 0 ? 'E' : (d > 0 ? '+' : '−') + Math.abs(d);
+$('s-days').textContent = days;
+$('s-finished').textContent = finished;
+$('s-par').textContent = finished ? Math.round(100 * atPar / finished) + '%' : '–';
+$('s-run').textContent = run;
+$('s-best').textContent = bestRun;
+$('empty').hidden = finished > 0;
+$('table').hidden = !finished;
+for (const g of games) {
+  const tr = document.createElement('tr'), name = document.createElement('td'), link = document.createElement('a');
+  link.href = `/${g.id}/`;
+  link.textContent = g.name;
+  name.append(link);
+  tr.append(name);
+  for (const v of [g.played, g.atPar, g.best === null ? '–' : fmt(g.best)]) {
+    const td = document.createElement('td');
+    td.textContent = v;
+    td.classList.toggle('none', !g.played);
+    tr.append(td);
+  }
+  $('rows').append(tr);
+}
+</script>

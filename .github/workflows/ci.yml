@@ -25,6 +25,7 @@ jobs:
       - run: node services/timber/scripts/check-generator.mjs
       - run: node services/web/scripts/check-track.mjs
       - run: node services/web/scripts/check-daily.mjs
+      - run: node services/web/scripts/check-stats.mjs
 
   image:
     runs-on: ubuntu-latest

@@ -361,6 +361,8 @@ function showResult() {
   $('r-share').value = shareText();
   $('r-share').rows = Math.min(14, S.runs.length + 1);
   $('result').hidden = false;
+  // The bot's cost, Flaky's par, arrives a moment after the page loads; a wrong diagnosis earns no par credit.
+  if (BOT || !S.verdict) Stats.finish('flaky', mode === 'daily', S.verdict ? S.cost - BOT.cost : null);
 }
 
 function save() {

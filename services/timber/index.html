@@ -278,6 +278,7 @@ function render() {
   if (done) {
     const d = game.count - game.par;
     $('r-title').textContent = d === 0 ? 'Path laid at par. Every push counted.' : `Path laid, ${fmtScore(d)} over par.`;
+    Stats.finish('timber', mode === 'daily', d);
     $('r-share').value = shareText();
     $('next').hidden = mode !== 'practice';
   }

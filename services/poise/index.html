@@ -274,6 +274,7 @@ function render() {
   if (game.solved) {
     const d = game.swaps - game.par;
     $('r-title').textContent = d === 0 ? 'Level in the fewest swaps.' : `Level, ${fmtScore(d)} over the fewest.`;
+    Stats.finish('poise', mode === 'daily', d);
     $('r-share').value = shareText();
     $('next').hidden = mode !== 'practice';
     $('note').textContent = '';

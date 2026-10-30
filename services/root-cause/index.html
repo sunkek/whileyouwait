@@ -450,6 +450,7 @@ function showResult() {
   $('r-par').textContent = `${P.k} root cause${P.k > 1 ? 's' : ''}: ${roots}. Par strategy: ${P.parSteps.map(a => `${a.k === 'check' ? 'check' : fixVerb(G, a.s).toLowerCase()} ${G.nodes[a.s].id}`).join(' → ')}.`;
   $('r-share').value = shareText();
   $('result').hidden = false;
+  Stats.finish('root-cause', mode === 'daily', S.down - P.par);
 }
 
 function save() {
