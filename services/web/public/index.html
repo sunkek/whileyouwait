@@ -153,11 +153,14 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .tag.done { color: var(--brand); }
 .games li { position: relative; }
-.star { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+/* The star sits at the end of the title row, beside the preview column, so it never covers the art. */
+.game-top { padding-right: 30px; }
+.star { position: absolute; top: 9px; right: 150px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .star:hover { color: var(--accent-ink); }
 .star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
 .star:focus-visible { outline: none; box-shadow: var(--ring); }
+@media (max-width: 440px) { .star { right: 114px; } }
 .your-stats { align-self: flex-start; font: 500 12px var(--font-mono); color: var(--muted); }
 .your-stats:hover { color: var(--fg); }
 footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
