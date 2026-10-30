@@ -1,6 +1,6 @@
 # WhileYouWait
 
-Daily deduction puzzles for developers, for while the build runs. No timers.
+Small daily games for any wait: the build, the commute, the queue. No timers.
 
 Live: <https://whileyouwait.suncake.xyz>
 
@@ -28,7 +28,13 @@ supplied the design system, and decided how the site is hosted and measured.
   Each game is one self-contained page; the image joins its `head.html` and
   `index.html` into `/<game>/index.html`.
 - **No backend.** Progress lives in the player's `localStorage`, keyed per game
-  and per day.
+  and per day, and is saved after every move, so a wait that ends mid-puzzle
+  resumes where it stopped.
+- **Works offline.** A service worker (`services/web/public/sw.js`) caches the
+  catalog and every game on the first visit, so all of them load without
+  signal. It fetches from the network first, so a deploy shows up on the next
+  load. The image build fills in its list of game files. The site also ships a
+  web app manifest, so it can be installed to a phone's home screen.
 - **Analytics: self-hosted Umami, no cookies.** Its tracker and collect endpoint
   are proxied under `/a/` on the same origin. On a game page,
   `services/web/public/shared/track.js` sends one `visit` event per day with
