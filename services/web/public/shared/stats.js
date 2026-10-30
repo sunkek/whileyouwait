@@ -98,7 +98,8 @@ const Stats = (() => {
       const days = s.results[id] || {}, scores = Object.values(days), counted = scores.filter(v => v !== null);
       Object.keys(days).forEach(d => played.add(d));
       return { id, name, played: scores.length, atPar: counted.filter(v => v <= 0).length,
-        best: counted.length ? Math.min(...counted) : null, rating: s.ratings[id] ?? null, favorite: s.favorites.includes(id) };
+        best: counted.length ? Math.min(...counted) : null,
+        average: counted.length ? Math.round(10 * counted.reduce((a, b) => a + b, 0) / counted.length) / 10 : null, rating: s.ratings[id] ?? null, favorite: s.favorites.includes(id) };
     });
     const days = [...played].sort();
     let best = 0, run = 0;

@@ -24,7 +24,10 @@ S.finish('flaky', true, null);       // finished with no par credit
 let g = S.summary();
 const poise = g.games.find(x => x.id === 'poise'), flaky = g.games.find(x => x.id === 'flaky');
 assert.equal(poise.played, 1); assert.equal(poise.best, 2); assert.equal(poise.atPar, 0);
-assert.equal(flaky.played, 1); assert.equal(flaky.best, null);
+assert.equal(poise.average, 2);
+assert.equal(flaky.played, 1); assert.equal(flaky.best, null); assert.equal(flaky.average, null);
+const mixed = load({ 'wyw-stats': JSON.stringify({ results: { poise: { [ago(1)]: 0, [ago(2)]: 1, [ago(3)]: 1, [ago(4)]: null } } }) }).summary().games.find(x => x.id === 'poise');
+assert.equal(mixed.average, 0.7, 'the mean skips results with no par credit');
 assert.equal(g.finished, 2); assert.equal(g.days, 1); assert.equal(g.run, 1);
 
 const runs = (days) => { const results = { poise: Object.fromEntries(days.map(n => [ago(n), 0])) }; return load({ 'wyw-stats': JSON.stringify({ results }) }).summary(); };
