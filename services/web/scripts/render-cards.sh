@@ -23,8 +23,8 @@ card() { # card <name> <eyebrow> <title> <text>
   shot "public/og/$1.png" 1200 630 "file://$PWD/cards/card.html?$qs"
 }
 
-card catalog "Daily puzzles for developers" "WhileYouWait" \
-  "Deduction puzzles for while the build runs. A new one of each every day, and no timers."
+card catalog "Small daily games" "WhileYouWait" \
+  "Small games for any wait: the build, the commute, the queue. A new one of each every day, and no timers."
 card runoff "Daily water puzzle" "Runoff" \
   "Shove soil around a hillside so the spring waters every field and keeps every house dry."
 card poise "Daily balance puzzle" "Poise" \
