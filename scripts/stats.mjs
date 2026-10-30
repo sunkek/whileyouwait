@@ -22,7 +22,10 @@ const site = sites.find(s => s.domain === 'whileyouwait.suncake.xyz');
 const base = `/websites/${site.id}`;
 const values = (event, prop) => get(`${base}/event-data/values?event=${event}&propertyName=${prop}&${window}`);
 const heading = t => console.log(`\n${t}`);
-const row = (...cells) => console.log('  ' + cells.map((c, i) => String(c ?? '–')[i ? 'padStart' : 'padEnd'](i ? 7 : 22)).join(''));
+// The collect endpoint is public, so anyone can send any string as a referrer, a browser or an event value.
+// Control characters are stripped before printing, or such a string could drive the terminal.
+const clean = v => String(v ?? '–').replace(/[\x00-\x1f\x7f-\x9f]/g, '?');
+const row = (...cells) => console.log('  ' + cells.map((c, i) => clean(c)[i ? 'padStart' : 'padEnd'](i ? 7 : 22)).join(''));
 
 const stats = await get(`${base}/stats?${window}`);
 console.log(`WhileYouWait, ${days ? `last ${days} days` : 'since launch'}`);
@@ -52,7 +55,7 @@ console.log(`  ${count('1')} yes, ${count('-1')} no`);
 
 heading('Where from');
 const metric = type => get(`${base}/metrics?type=${type}&${window}&limit=10`);
-console.log('  ' + (await metric('country')).map(m => `${m.x} ${m.y}`).join(', '));
-console.log('  ' + (await metric('device')).map(m => `${m.x} ${m.y}`).join(', '));
-const referrers = await metric('referrer');
-console.log('  referrers: ' + (referrers.length ? referrers.map(m => `${m.x} ${m.y}`).join(', ') : 'none recorded'));
+const list = items => items.map(m => `${clean(m.x)} ${clean(m.y)}`).join(', ');
+console.log('  ' + list(await metric('country')));
+console.log('  ' + list(await metric('device')));
+console.log('  referrers: ' + (list(await metric('referrer')) || 'none recorded'));

@@ -14,14 +14,12 @@ PASS_FILE="${STATS_PASS_FILE:-$HOME/secrets/umami-pass.age}"
 AGE_KEY="${STATS_AGE_KEY:-$HOME/.config/sops/age/keys.txt}"
 
 if [ -z "${STATS_URL:-}" ]; then
-  ssh -N -o ExitOnForwardFailure=yes -L "127.0.0.1:$PORT:127.0.0.1:3901" "$HOST" &
-  tunnel=$!
-  trap 'kill "$tunnel" 2>/dev/null || true' EXIT
-  for _ in $(seq 1 50); do
-    kill -0 "$tunnel" 2>/dev/null || { echo "the tunnel to $HOST failed" >&2; exit 1; }
-    curl -s -m 1 -o /dev/null "http://127.0.0.1:$PORT/api/heartbeat" && break
-    sleep 0.2
-  done
+  # With -f and ExitOnForwardFailure, ssh returns only once it holds the port, and
+  # fails if anything else does, so the password can't reach another local process.
+  control="$(mktemp -d)"
+  trap 'ssh -S "$control/ssh" -O exit "$HOST" 2>/dev/null || true; rm -rf "$control"' EXIT
+  ssh -f -N -M -S "$control/ssh" -o ExitOnForwardFailure=yes -L "127.0.0.1:$PORT:127.0.0.1:3901" "$HOST" \
+    || { echo "could not open the tunnel: is local port $PORT free?" >&2; exit 1; }
   STATS_URL="http://127.0.0.1:$PORT"
 fi
 
