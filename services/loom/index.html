@@ -1,7 +1,8 @@
 <title>Loom: a daily weaving puzzle · WhileYouWait</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: one narrow column; the weaving draft is the board, stats above, controls below.
+/* Layout: one narrow column; the weaving draft is the board, stats above, controls below. The target
+   sits in the draft: left of the cloth where the column is wide enough, right above the loom on phones.
    Shared tokens and page chrome come from /shared/game.css. The dyes are game colours:
    one warp dye per day on a cream weft, warmed toward the palette. */
 :root {
@@ -18,7 +19,15 @@
 
 /* The draft, laid out as weavers write it: threading above the cloth, the
    tie-up in the corner, treadling to the right. Frame 1 is the bottom row. */
-.draft { --dye: var(--dye-indigo); display: grid; grid-template-columns: calc(16 * var(--cell)) calc(4 * var(--cell)); grid-template-rows: calc(4 * var(--cell)) calc(16 * var(--cell)); gap: 8px; justify-content: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+.draft { --dye: var(--dye-indigo); display: grid; grid-template-columns: calc(16 * var(--cell)) calc(4 * var(--cell)); grid-template-rows: auto calc(4 * var(--cell)) calc(16 * var(--cell));
+  grid-template-areas: "target target" "threading tieup" "cloth treadling"; gap: 8px; justify-content: center; user-select: none; -webkit-tap-highlight-color: transparent; }
+.threading { grid-area: threading; } .tieup { grid-area: tieup; } .cloth { grid-area: cloth; } .treadling { grid-area: treadling; }
+.target-box { grid-area: target; justify-self: center; margin-bottom: 4px; }
+@media (min-width: 560px) {
+  .draft { grid-template-columns: auto calc(16 * var(--cell)) calc(4 * var(--cell)); grid-template-rows: calc(4 * var(--cell)) calc(16 * var(--cell));
+    grid-template-areas: ". threading tieup" "target cloth treadling"; }
+  .target-box { justify-self: end; align-self: start; margin: 0 8px 0 0; }
+}
 .draft[data-dye="madder"] { --dye: var(--dye-madder); }
 .draft[data-dye="weld"] { --dye: var(--dye-weld); }
 .draft[data-dye="woad"] { --dye: var(--dye-woad); }
@@ -57,14 +66,14 @@
 @keyframes settle { 0% { filter: brightness(1); } 40% { filter: brightness(1.35); } 100% { filter: brightness(1); } }
 .threading .cell:focus-visible, .treadling .cell:focus-visible { outline: none; box-shadow: var(--ring); }
 
-.below { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.target-box { display: flex; flex-direction: column; gap: 6px; }
-.target { --dye: var(--dye-indigo); display: grid; grid-template-columns: repeat(16, 7px); grid-template-rows: repeat(16, 7px); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.target-box { display: flex; flex-direction: column; gap: 4px; }
+.target-box .eyebrow { margin: 0; }
+.target { --dye: var(--dye-indigo); display: grid; grid-template-columns: repeat(16, 6px); grid-template-rows: repeat(16, 6px); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .target[data-dye="madder"] { --dye: var(--dye-madder); }
 .target[data-dye="weld"] { --dye: var(--dye-weld); }
 .target[data-dye="woad"] { --dye: var(--dye-woad); }
 .target .w { background: var(--dye); } .target .f { background: var(--weft); }
-.side { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
+.side { display: flex; flex-direction: column; gap: 8px; }
 .btn[aria-pressed="true"] { border-color: var(--bad); color: var(--bad); }
 </style>
 
@@ -88,22 +97,20 @@
   </div>
 
   <div class="draft" id="draft" aria-label="Weaving draft">
+    <div class="target-box"><div class="eyebrow">Target</div><div class="target" id="target" aria-label="Target pattern"></div></div>
     <div class="grid threading" id="threading" role="group" aria-label="Threading: tap a column to move that thread to the next frame"></div>
     <div class="grid tieup" id="tieup" aria-label="Tie-up"></div>
     <div class="grid cloth" id="cloth" aria-label="Cloth"></div>
     <div class="grid treadling" id="treadling" role="group" aria-label="Treadling: tap a row to move that pass to the next treadle"></div>
   </div>
 
-  <div class="below">
-    <div class="target-box"><div class="eyebrow">Target</div><div class="target" id="target" aria-label="Target pattern"></div></div>
-    <div class="side">
-      <div class="controls">
-        <button class="btn" id="reset">Reset loom</button>
-        <button class="btn" id="hint" aria-pressed="false">Give me a tip</button>
-        <button class="btn" id="new" hidden>New puzzle</button>
-      </div>
-      <span class="note" id="hint-note">Reset restores the start; taps still count. A tip rings the wrong cells and marks the result as assisted.</span>
+  <div class="side">
+    <div class="controls">
+      <button class="btn" id="reset">Reset loom</button>
+      <button class="btn" id="hint" aria-pressed="false">Give me a tip</button>
+      <button class="btn" id="new" hidden>New puzzle</button>
     </div>
+    <span class="note" id="hint-note">Reset restores the start; taps still count. A tip rings the wrong cells and marks the result as assisted.</span>
   </div>
 
   <div class="result" id="result" hidden>
