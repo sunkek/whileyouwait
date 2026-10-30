@@ -2,10 +2,19 @@ name: build-images
 
 # Build the web image (nginx serving the catalog and every game) and push it to
 # GHCR as ghcr.io/<owner>/whileyouwait-web, then roll it out on the host.
+# Only what goes into the image triggers a build: docs, check scripts and CI
+# changes don't redeploy the site. Tags and a manual run always build, and puzzles.yml
+# dispatches this workflow after extending the dailies, because its push can't
+# start other workflows.
 on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths:
+      - "services/**"
+      - "!services/**/*.md"
+      - "!services/*/scripts/**"
+      - ".github/workflows/images.yml"
   workflow_dispatch:
 
 permissions:
