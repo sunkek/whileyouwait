@@ -11,6 +11,7 @@ COPY flaky/head.html flaky/index.html /tmp/games/flaky/
 COPY loom/head.html loom/index.html /tmp/games/loom/
 COPY poise/head.html poise/index.html /tmp/games/poise/
 COPY runoff/head.html runoff/index.html /tmp/games/runoff/
+COPY timber/head.html timber/index.html timber/puzzles.js /tmp/games/timber/
 # The service worker's precache list is then filled with every game's files.
 RUN set -e; cd /tmp/games; games="$(echo *)"; for g in $games; do \
       mkdir -p "/usr/share/nginx/html/$g"; \

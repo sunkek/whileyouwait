@@ -1,0 +1,401 @@
+<title>Timber: a daily path puzzle · WhileYouWait</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column; the board is the column's full width, stats above, controls below.
+   Shared tokens and page chrome come from /shared/game.css. Blocks are amber and sage wood; fallen
+   ones are a step darker and matte, so standing blocks stay the brightest things on the board. */
+:root {
+  --amber-side: #B4850A; --sage-side: #3E5636; --pip: rgba(26, 22, 17, 0.72);
+  --amber-hi: #DDB24F; --amber-lo: #BF9029; --amber-cap: #EAC463; --sage-hi: #8AA37E; --sage-lo: #668058; --sage-cap: #9DB592;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --amber-side: #94700F; --sage-side: #54704A; --pip: rgba(26, 22, 17, 0.8);
+  --amber-hi: #A98328; --amber-lo: #80621A; --amber-cap: #BD9635; --sage-hi: #64805A; --sage-lo: #4A6141; --sage-cap: #75916A; } }
+:root[data-theme="dark"] {
+  --amber-side: #94700F; --sage-side: #54704A; --pip: rgba(26, 22, 17, 0.8);
+  --amber-hi: #A98328; --amber-lo: #80621A; --amber-cap: #BD9635; --sage-hi: #64805A; --sage-lo: #4A6141; --sage-cap: #75916A; }
+
+/* The board: an SVG scaled to the column, so cells stay large on a phone. */
+#board { display: block; width: 100%; max-width: 500px; margin: 0 auto; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#board .cell { fill: var(--empty); stroke: var(--line); stroke-width: 1; }
+#board .reach { fill: var(--accent); opacity: 0.2; pointer-events: none; }
+#board .blockhit { fill: transparent; cursor: pointer; }
+#board .arrow { fill: var(--tile); stroke: var(--ink); stroke-width: 1.5; }
+#board .chev { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#board .sel { fill: none; stroke: var(--ink); stroke-width: 2.5; pointer-events: none; }
+#note { min-height: 2.9em; }
+#note.bad { color: var(--bad); font-weight: 500; }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1>Timber</h1>
+    </div>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-gap">0</b><small>Gap</small></div>
+    <div class="stat"><b id="s-pushes">0</b><small>Pushes</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Par</small></div>
+  </div>
+
+  <svg id="board" viewBox="0 0 372 372" role="img" aria-label="Board of standing and fallen blocks"></svg>
+
+  <div class="controls">
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="reset">Reset</button>
+    <button class="btn" id="new" hidden>New board</button>
+  </div>
+  <p class="note" id="note"></p>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next board</button>
+    </div>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Lay a path of fallen blocks from flag to flag, side by side or end to end. A sage block must not fall. Par is the fewest pushes that can do it.</li>
+      <li>Tap an amber block, then an arrow, or swipe on it. A block falls as many squares as it has dots.</li>
+      <li>It knocks over the first standing block it reaches, and that block falls the same way.</li>
+      <li>The edge or a fallen block stops it, and the line ends there.</li>
+      <li>Gap counts the squares your path still needs. A path can't cross a sage block.</li>
+      <li>Undo takes a push back, and the push still counts.</li>
+    </ul>
+  </details>
+</div>
+
+<script src="puzzles.js"></script>
+<script>
+// ---------- rules ----------
+const N = 5, DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+const initial = blocks => ({ fallen: blocks.map(() => false), occ: new Array(N * N).fill(-1), dir: [] });
+const standing = (blocks, st) => { const at = new Map(); blocks.forEach((k, i) => { if (!st.fallen[i]) at.set(k.y * N + k.x, i); }); return at; };
+
+// The squares a pushed block would fall across: its height, up to whatever stops it. Null only for a push that
+// lands straight on a sage block, which gets no arrow because it could only lose.
+function reach(blocks, st, b, d) {
+  const k = blocks[b], at = standing(blocks, st), own = [];
+  let x = k.x, y = k.y;
+  for (let s = 1; s <= k.h; s++) {
+    x += DIRS[d][0]; y += DIRS[d][1];
+    if (x < 0 || y < 0 || x >= N || y >= N) break;
+    const c = y * N + x;
+    if (st.occ[c] >= 0) break;
+    if (at.has(c)) return blocks[at.get(c)].sage ? null : own;
+    own.push(c);
+  }
+  return own;
+}
+
+// Every block in a line obeys the same three rules: it falls as far as its height, it knocks over the first
+// standing block it reaches, and the edge or a fallen block stops it. Returns the new state and the line.
+function push(blocks, st, b, d) {
+  const fallen = st.fallen.slice(), occ = st.occ.slice(), dir = st.dir.slice(), chain = [], at = standing(blocks, st);
+  for (let cur = b; cur >= 0;) {
+    const k = blocks[cur], base = k.y * N + k.x, cells = [base];
+    fallen[cur] = true; dir[cur] = d; at.delete(base); occ[base] = cur;
+    let next = -1, x = k.x, y = k.y;
+    for (let s = 1; s <= k.h && next < 0; s++) {
+      x += DIRS[d][0]; y += DIRS[d][1];
+      if (x < 0 || y < 0 || x >= N || y >= N) break;
+      const c = y * N + x;
+      if (occ[c] >= 0) break;
+      if (at.has(c)) next = at.get(c);
+      else { occ[c] = cur; cells.push(c); }
+    }
+    chain.push({ id: cur, d, cells });
+    cur = next;
+  }
+  return { st: { fallen, occ, dir }, chain };
+}
+const lost = (blocks, st) => blocks.some((k, i) => k.sage && st.fallen[i]);
+// Squares still missing between the two flags: fallen squares cost nothing, and any other square costs one,
+// since an amber block can still fall out of the way. Sage blocks can't be crossed. Zero means the path is laid.
+// blocks.ends holds the two flag squares.
+function gap(blocks, st) {
+  const block = new Set(); blocks.forEach(k => { if (k.sage) block.add(k.y * N + k.x); });
+  const [a, z] = blocks.ends, dist = new Array(N * N).fill(Infinity), queue = [a];
+  dist[a] = st.occ[a] >= 0 ? 0 : 1;
+  while (queue.length) {
+    const u = queue.shift(), x = u % N, y = (u - x) / N;
+    for (let d = 0; d < 4; d++) {
+      const X = x + DIRS[d][0], Y = y + DIRS[d][1];
+      if (X < 0 || Y < 0 || X >= N || Y >= N) continue;
+      const v = Y * N + X, w = dist[u] + (st.occ[v] >= 0 ? 0 : 1);
+      if (!block.has(v) && w < dist[v]) { dist[v] = w; queue.push(v); }
+    }
+  }
+  return dist[z];
+}
+const won = (blocks, st) => !lost(blocks, st) && gap(blocks, st) === 0;
+function pushes(blocks, st) {
+  const m = [];
+  blocks.forEach((k, i) => { if (!k.sage && !st.fallen[i]) for (let d = 0; d < 4; d++) if (reach(blocks, st, i, d)) m.push([i, d]); });
+  return m;
+}
+// Boards are precomputed by scripts/build-puzzles.mjs; finding one takes seconds. A stored board is a string of
+// x, y, height and sage digits per block, the two flag squares, and par.
+function decode([cells, a, z, par]) {
+  const blocks = (cells.match(/..../g) || []).map(s => ({ x: +s[0], y: +s[1], h: +s[2], sage: s[3] === '1' }));
+  blocks.ends = [a, z];
+  return { blocks, par };
+}
+const encode = ({ blocks, par }) => [blocks.map(k => `${k.x}${k.y}${k.h}${k.sage ? 1 : 0}`).join(''), ...blocks.ends, par];
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+const CELL = 64, PAD = 26, VIEW = 2 * PAD + N * CELL, cx = c => PAD + (c % N) * CELL, cy = c => PAD + Math.floor(c / N) * CELL;
+const CHEV = ['M-8 4 L0 -5 L8 4', 'M-4 -8 L5 0 L-4 8', 'M-8 -4 L0 5 L8 -4', 'M4 -8 L-5 0 L4 8'];
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let mode = 'daily', game = null, sel = null, busy = false, drag = null;
+
+function pips(x, y, w, h, n, horizontal, r = 4.5) { // n dots evenly along one side
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    const t = (i + 1) / (n + 1);
+    s += `<circle cx="${horizontal ? x + w * t : x + w / 2}" cy="${horizontal ? y + h / 2 : y + h * t}" r="${r}" fill="var(--pip)"/>`;
+  }
+  return s;
+}
+function standingBlock(k, i, lostOne) {
+  const c = k.y * N + k.x, x = cx(c) + 8, y = cy(c) + 6, s = CELL - 16, lift = 2 + k.h * 2;
+  const top = k.sage ? 'var(--brand)' : 'var(--accent)', side = k.sage ? 'var(--sage-side)' : 'var(--amber-side)';
+  return `<rect x="${x}" y="${y + lift}" width="${s}" height="${s}" rx="6" fill="${side}"/>` +
+    `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="6" fill="${top}"/>` +
+    (k.sage ? `<rect x="${x + 6}" y="${y + 6}" width="${s - 12}" height="${s - 12}" rx="3" fill="none" stroke="var(--on-brand)" stroke-opacity="0.5" stroke-width="1.5"/>` : '') +
+    pips(x, y, s, s, k.h, true);
+}
+// A fallen block: the same wood lying on its side over `cells`, grown to `p` of its length while it falls.
+// Shading runs across the plank, grain along it, and the dotted top face is now the end it fell toward.
+function bar(k, id, cells, d, p) {
+  const a = cells[0], b = cells[cells.length - 1], s = CELL - 16;
+  const x0 = cx(a) + 8, y0 = cy(a) + 8, x1 = cx(b) + 8, y1 = cy(b) + 8;
+  const x = x0 + Math.min(0, x1 - x0) * p, y = y0 + Math.min(0, y1 - y0) * p;
+  const w = s + Math.abs(x1 - x0) * p, h = s + Math.abs(y1 - y0) * p;
+  const across = DIRS[d][0] !== 0, wood = k.sage ? 'sage' : 'amber', CAP = 17;
+  let o = `<rect x="${x + 1}" y="${y + 6}" width="${w - 2}" height="${h}" rx="6" fill="var(--pip)" opacity="0.13"/>` +
+    `<rect x="${x}" y="${y + 3}" width="${w}" height="${h}" rx="5" fill="var(--${wood}-side)"/>` +
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="url(#${wood}-${across ? 'h' : 'v'})"/>`;
+  for (let i = 0; i < 3; i++) { // grain, offset by block so no two planks match
+    const at = s * (0.24 + 0.26 * i) + (id * 5 + i * 3) % 5 - 2, m = 7 + (id * 7 + i * 13) % 11, n = 7 + (id * 11 + i * 5) % 11;
+    o += across ? `<path d="M${x + m} ${y + at} H${x + w - n}"` : `<path d="M${x + at} ${y + m} V${y + h - n}"`;
+    o += ` stroke="var(--${wood}-side)" stroke-opacity="0.4" stroke-width="1.2" stroke-linecap="round"/>`;
+  }
+  const cw = across ? CAP : w, ch = across ? h : CAP;
+  const capX = d === 1 ? x + w - CAP : x, capY = d === 2 ? y + h - CAP : y;
+  o += `<rect x="${capX}" y="${capY}" width="${cw}" height="${ch}" rx="5" fill="var(--${wood}-cap)" stroke="var(--${wood}-side)" stroke-opacity="0.55"/>` +
+    pips(capX, capY, cw, ch, k.h, !across, 3.2);
+  if (k.sage) o += `<rect x="${x - 1}" y="${y - 1}" width="${w + 2}" height="${h + 5}" rx="6" fill="none" stroke="var(--bad)" stroke-width="2.5"/>`;
+  return o;
+}
+
+const stops = t => `<stop offset="0" style="stop-color:var(--${t}-hi)"/><stop offset="1" style="stop-color:var(--${t}-lo)"/>`;
+const WOOD = '<defs>' + ['amber', 'sage'].map(t => `<linearGradient id="${t}-h" x1="0" y1="0" x2="0" y2="1">${stops(t)}</linearGradient><linearGradient id="${t}-v" x1="0" y1="0" x2="1" y2="0">${stops(t)}</linearGradient>`).join('') + '</defs>';
+
+function draw(st, anim, dust = [], walker = null) {
+  const blocks = game.blocks;
+  let s = WOOD;
+  for (let c = 0; c < N * N; c++) s += `<rect class="cell" x="${cx(c)}" y="${cy(c)}" width="${CELL}" height="${CELL}"/>`;
+  // Fallen blocks, from the state.
+  const lying = {};
+  st.occ.forEach((id, c) => { if (id >= 0) (lying[id] = lying[id] || []).push(c); });
+  for (const id in lying) {
+    const k = blocks[id], base = k.y * N + k.x;
+    const cells = lying[id].slice().sort((p, q) => Math.abs(p - base) - Math.abs(q - base));
+    if (!anim || !anim.has(+id)) s += bar(k, +id, cells, st.dir[id] ?? 2, 1);
+  }
+  // Blocks mid-fall, then the ones still standing, top row first so lower ones overlap upward.
+  if (anim) anim.forEach((e, id) => { if (e.p > 0) s += bar(blocks[id], id, e.cells, e.d, e.p); });
+  const order = blocks.map((k, i) => i).filter(i => !st.fallen[i] || (anim && anim.has(i) && anim.get(i).p === 0)).sort((a, b) => blocks[a].y - blocks[b].y);
+  order.forEach(i => { s += standingBlock(blocks[i], i); });
+  game.blocks.ends.forEach((c, side) => { // a flag: a tab on the board's edge and a ring in its square
+    const [mx, my] = mid(c), tab = side ? PAD + N * CELL : PAD - 16;
+    s += `<rect x="${tab}" y="${my - 10}" width="16" height="20" rx="3" fill="var(--ink)"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="var(--ink)" stroke-width="3"/>`;
+  });
+  if (walker) {
+    const { path, at } = walker, i = Math.floor(at), [ax, ay] = mid(path[i]), [bx, by] = mid(path[Math.min(path.length - 1, i + 1)]), f = at - i;
+    const done = path.slice(0, i + 1).map(mid).concat([[ax + (bx - ax) * f, ay + (by - ay) * f]]);
+    s += `<polyline points="${done.map(p => p.join()).join(' ')}" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 9"/>`;
+    s += `<circle cx="${ax + (bx - ax) * f}" cy="${ay + (by - ay) * f}" r="10" fill="var(--tile)" stroke="var(--ink)" stroke-width="3"/>`;
+  }
+  dust.forEach(([x, y, r, o]) => { s += `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--muted)" opacity="${o}"/>`; });
+  if (sel !== null && !anim) {
+    const k = blocks[sel], c = k.y * N + k.x;
+    for (let d = 0; d < 4; d++) {
+      const r = reach(blocks, st, sel, d);
+      if (r) r.forEach(q => { s += `<rect class="reach" x="${cx(q)}" y="${cy(q)}" width="${CELL}" height="${CELL}"/>`; });
+    }
+    s += `<rect class="sel" x="${cx(c) + 4}" y="${cy(c) + 2}" width="${CELL - 8}" height="${CELL - 2}" rx="8"/>`;
+  }
+  // Tap targets go last, so they sit above the art.
+  if (!anim) {
+    blocks.forEach((k, i) => {
+      if (k.sage || st.fallen[i]) return;
+      const c = k.y * N + k.x;
+      s += `<rect class="blockhit" data-block="${i}" x="${cx(c)}" y="${cy(c)}" width="${CELL}" height="${CELL}"/>`;
+    });
+    if (sel !== null) {
+      const k = blocks[sel];
+      for (let d = 0; d < 4; d++) {
+        if (!reach(blocks, st, sel, d)) continue;
+        // On the shared edge, so the arrow doesn't hide a neighbour's dots; the wider ring is the tap target.
+        const px = PAD + k.x * CELL + CELL / 2 + DIRS[d][0] * 40, py = PAD + k.y * CELL + CELL / 2 + DIRS[d][1] * 40;
+        s += `<g data-dir="${d}" style="cursor:pointer"><circle cx="${px}" cy="${py}" r="26" fill="transparent"/><circle class="arrow" cx="${px}" cy="${py}" r="15"/><path class="chev" d="${CHEV[d]}" transform="translate(${px} ${py}) scale(0.8)"/></g>`;
+      }
+    }
+  }
+  $('board').innerHTML = s;
+}
+
+function render() {
+  const st = game.st, down = lost(game.blocks, st), done = won(game.blocks, st), g = gap(game.blocks, st);
+  $('s-gap').textContent = g;
+  $('s-pushes').textContent = game.count;
+  $('s-par').textContent = game.par;
+  $('undo').disabled = !game.history.length || done || busy;
+  $('reset').disabled = !game.history.length || done || busy;
+  const stuck = !done && !down && !pushes(game.blocks, st).length;
+  const noPush = sel !== null && DIRS.every((_, d) => !reach(game.blocks, st, sel, d));
+  const note = $('note');
+  note.classList.toggle('bad', down || stuck);
+  note.textContent = down ? 'A sage block fell. Undo that push, or reset.' :
+    stuck ? 'No block can be pushed. Undo or reset.' :
+    done ? '' : sel !== null ? (noPush ? 'Every way this block can fall lands on a sage block.' : 'Tap an arrow to push, or tap the block again to put it down.') : 'Lay a path of fallen blocks between the two flags.';
+  $('result').hidden = !done;
+  if (done) {
+    const d = game.count - game.par;
+    $('r-title').textContent = d === 0 ? 'Path laid at par. Every push counted.' : `Path laid, ${fmtScore(d)} over par.`;
+    $('r-share').value = shareText();
+    $('next').hidden = mode !== 'practice';
+  }
+}
+
+function playChain(before, after, chain) {
+  if (calm) { game.st = after; finish(); return; }
+  busy = true; sel = null;
+  const STEP = 170, DUST = 240, anim = new Map(chain.map(e => [e.id, { cells: e.cells, d: e.d, p: 0 }]));
+  const t0 = performance.now();
+  (function frame(now) {
+    const dust = [];
+    chain.forEach((e, j) => {
+      const t = Math.max(0, (now - t0 - j * STEP) / STEP);
+      anim.get(e.id).p = Math.min(1, t * t); // gravity: slow to tip, fast to land
+      const q = (now - t0 - (j + 1) * STEP) / DUST; // two puffs either side of where it landed
+      if (q > 0 && q < 1) {
+        const c = e.cells[e.cells.length - 1], px = cx(c) + CELL / 2 + DIRS[e.d][0] * 24, py = cy(c) + CELL / 2 + DIRS[e.d][1] * 24;
+        for (const side of [-1, 1]) dust.push([px + DIRS[e.d][1] * side * (20 + q * 8), py + DIRS[e.d][0] * side * (20 + q * 8), 2.5 + q * 5, 0.32 * (1 - q)]);
+      }
+    });
+    draw({ fallen: after.fallen, occ: before.occ, dir: after.dir }, anim, dust);
+    if (now - t0 < chain.length * STEP + DUST) requestAnimationFrame(frame);
+    else { busy = false; game.st = after; finish(); }
+  })(t0);
+}
+function finish() { sel = null; save(); draw(game.st); render(); if (won(game.blocks, game.st)) walk(); }
+
+// The payoff: a marker walks the finished path from flag to flag.
+function route() {
+  const { occ } = game.st, [a, z] = game.blocks.ends, from = { [a]: -1 }, queue = [a];
+  while (queue.length) {
+    const u = queue.shift(), x = u % N, y = (u - x) / N;
+    for (let d = 0; d < 4; d++) {
+      const X = x + DIRS[d][0], Y = y + DIRS[d][1], v = Y * N + X;
+      if (X >= 0 && Y >= 0 && X < N && Y < N && occ[v] >= 0 && !(v in from)) { from[v] = u; queue.push(v); }
+    }
+  }
+  const out = []; for (let c = z; c !== -1 && c !== undefined; c = from[c]) out.unshift(c);
+  return out;
+}
+const mid = c => [cx(c) + CELL / 2, cy(c) + CELL / 2];
+function walk() {
+  const path = route(), STEP = 150;
+  if (calm || path.length < 2) { draw(game.st, null, [], { path, at: path.length - 1 }); return; }
+  const t0 = performance.now();
+  (function frame(now) {
+    const at = Math.min(path.length - 1, (now - t0) / STEP);
+    if (!game || !won(game.blocks, game.st)) return;
+    draw(game.st, null, [], { path, at });
+    if (at < path.length - 1) requestAnimationFrame(frame);
+  })(t0);
+}
+
+function doPush(b, d) {
+  if (busy || !reach(game.blocks, game.st, b, d)) return;
+  game.history.push(game.st);
+  game.count++;
+  const before = game.st, r = push(game.blocks, before, b, d);
+  sel = null;
+  render();
+  playChain(before, r.st, r.chain);
+}
+
+// Tap a block, then an arrow; or swipe on a block.
+const svgPoint = e => { const r = $('board').getBoundingClientRect(); return [(e.clientX - r.left) * VIEW / r.width, (e.clientY - r.top) * VIEW / r.height]; };
+$('board').addEventListener('pointerdown', e => {
+  if (busy || won(game.blocks, game.st) || lost(game.blocks, game.st)) return;
+  const dir = e.target.closest('[data-dir]');
+  if (dir) { doPush(sel, +dir.dataset.dir); return; }
+  const hit = e.target.closest('[data-block]');
+  drag = hit ? { b: +hit.dataset.block, at: svgPoint(e) } : null;
+  if (!hit) { sel = null; draw(game.st); render(); }
+});
+$('board').addEventListener('pointerup', e => {
+  if (!drag || busy) { drag = null; return; }
+  const { b, at } = drag, [x, y] = svgPoint(e), dx = x - at[0], dy = y - at[1];
+  drag = null;
+  if (Math.hypot(dx, dy) > 24) {
+    const d = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0);
+    if (reach(game.blocks, game.st, b, d)) { doPush(b, d); return; }
+  }
+  sel = sel === b ? null : b;
+  draw(game.st); render();
+});
+
+// ---------- modes, persistence, sharing ----------
+const dailyNo = Daily.number(PUZZLES.epoch), store = Daily.store('timber1-'), { fmtScore } = Daily;
+const shareText = () => `${mode === 'daily' ? `Timber #${dailyNo}` : 'Timber practice'} · ${fmtScore(game.count - game.par)}\n${game.count} pushes · par ${game.par}\n${location.origin}/timber/`;
+
+function save() {
+  if (mode !== 'daily') return;
+  store.save({ st: game.st, count: game.count, history: game.history });
+}
+function restore() {
+  const s = store.load();
+  if (s && s.st && s.st.fallen.length === game.blocks.length && s.st.occ.length === N * N) Object.assign(game, { st: s.st, count: s.count, history: s.history || [] });
+}
+function start(m) {
+  mode = m; sel = null; busy = false;
+  $('tab-daily').setAttribute('aria-pressed', m === 'daily');
+  $('tab-practice').setAttribute('aria-pressed', m === 'practice');
+  $('new').hidden = m !== 'practice';
+  // daily[i] is the board for PUZZLES.epoch + i days; a scheduled workflow keeps the list running ahead.
+  const { daily, practice } = PUZZLES, i = dailyNo - 1;
+  const g = decode(m === 'daily' ? daily[i] || daily[(i % daily.length + daily.length) % daily.length] : practice[Math.floor(Math.random() * practice.length)]);
+  game = Object.assign(g, { st: initial(g.blocks), count: 0, history: [] });
+  if (m === 'daily') restore();
+  $('eyebrow').textContent = m === 'daily' ? `daily board #${dailyNo}` : 'practice board';
+  draw(game.st); render();
+  if (won(game.blocks, game.st)) walk();
+}
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('new').onclick = () => start('practice');
+$('next').onclick = () => start('practice');
+$('undo').onclick = () => { const s = game.history.pop(); if (!s || busy) return; game.st = s; sel = null; save(); draw(game.st); render(); };
+$('reset').onclick = () => { if (busy || !game.history.length) return; game.history.push(game.st); game.st = initial(game.blocks); sel = null; save(); draw(game.st); render(); };
+Daily.copyButton($('copy'), $('r-share'));
+start('daily');
+</script>
