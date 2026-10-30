@@ -544,13 +544,16 @@ const SAVE_KEY = 'runoff1-' + dateKey;
 
 function save() {
   if (mode !== 'daily') return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ h: game.h, moves: game.moves, solved: game.solved })); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ h: game.h, moves: game.moves, solved: game.solved, history: game.history })); } catch (e) {}
 }
 function restore() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     if (!s || !Array.isArray(s.h) || s.h.length !== N || s.h.reduce((a, b) => a + b) !== game.start.reduce((a, b) => a + b)) return;
     Object.assign(game, { h: s.h, moves: s.moves, solved: s.solved });
+    // Undo survives a reload; shoves conserve soil, so every history entry holds the same total.
+    const total = game.start.reduce((a, b) => a + b);
+    if (Array.isArray(s.history) && s.history.every(h => Array.isArray(h) && h.length === N && h.reduce((a, b) => a + b) === total)) game.history = s.history;
   } catch (e) {}
 }
 
