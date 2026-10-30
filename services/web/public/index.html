@@ -64,8 +64,10 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .games { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
 .game { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px; padding: 12px; }
-.game .preview { grid-row: 1; width: 100%; height: auto; aspect-ratio: 3 / 2; }
-.game .game-body { grid-row: 2; }
+.game-body { display: contents; }
+.game-top { grid-row: 1; padding-right: 26px; }
+.game .preview { grid-row: 2; justify-self: center; width: 108px; height: 72px; }
+.game p { grid-row: 3; }
 .preview { width: 120px; height: 80px; display: block; overflow: visible; }
 
 /* Card previews: one looping story per game, drawn in the site's tokens. */
@@ -160,12 +162,12 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
 .game-top { display: flex; flex-direction: column; gap: 0; }
 .game h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
-.game p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.game p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .tag.done { color: var(--brand); }
-.games li { position: relative; display: grid; container-type: inline-size; }
-/* The star ends the title row, just under the art, whose height follows the card's width. */
-.star { position: absolute; top: calc(12px + (100cqw - 26px) * 2 / 3 + 2px); right: 4px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+.games li { position: relative; display: grid; }
+/* The star ends the title row, in the card's corner; the padding keeps the title clear of it. */
+.star { position: absolute; top: 5px; right: 4px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .star:hover { color: var(--accent-ink); }
 .star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
