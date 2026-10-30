@@ -73,3 +73,15 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
             "deploy@$DEPLOY_HOST" "WEB_TAG=$GITHUB_SHA"
+      # Tells Bing, Yandex and the other IndexNow engines the pages changed. The
+      # key file sits at the site root; it's meant to be public. A failure here
+      # doesn't fail the deploy. Google isn't part of IndexNow: it reads the sitemap.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Notify search engines
+        continue-on-error: true
+        run: |
+          key="$(basename -s .txt services/web/public/*.txt | grep -E '^[0-9a-f]{32}$')"
+          urls="$(grep -o 'https://[^<]*' services/web/public/sitemap.xml | grep -v sitemaps.org | jq -R . | jq -sc .)"
+          curl -sS -m 30 -o /dev/null -w 'IndexNow: %{http_code}\n' -H 'content-type: application/json; charset=utf-8' \
+            -d "{\"host\":\"whileyouwait.suncake.xyz\",\"key\":\"$key\",\"urlList\":$urls}" \
+            https://api.indexnow.org/indexnow
