@@ -11,6 +11,7 @@ COPY flaky/head.html flaky/index.html /tmp/games/flaky/
 COPY loom/head.html loom/index.html /tmp/games/loom/
 COPY poise/head.html poise/index.html /tmp/games/poise/
 COPY runoff/head.html runoff/index.html /tmp/games/runoff/
+COPY chute/head.html chute/index.html /tmp/games/chute/
 COPY timber/head.html timber/index.html timber/puzzles.js /tmp/games/timber/
 # The service worker's precache list is then filled with every game's files.
 # Then each shared file and puzzle list gets a content hash in its URL. Cloudflare

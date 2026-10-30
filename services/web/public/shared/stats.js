@@ -6,7 +6,7 @@
 // link below: they show how a run went without giving the day's answer away.
 const Stats = (() => {
   const KEY = 'wyw-stats';
-  const GAMES = [['timber', 'Timber'], ['runoff', 'Runoff'], ['poise', 'Poise'], ['loom', 'Loom'],
+  const GAMES = [['chute', 'Chute'], ['timber', 'Timber'], ['runoff', 'Runoff'], ['poise', 'Poise'], ['loom', 'Loom'],
     ['root-cause', 'Root Cause'], ['flaky', 'Flaky'], ['hexroute', 'Hexroute']].map(([id, name]) => ({ id, name }));
 
   function read() {

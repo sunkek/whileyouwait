@@ -6,6 +6,7 @@ Live: <https://whileyouwait.suncake.xyz>
 
 | Game | Path | What it is |
 |---|---|---|
+| [Chute](services/chute/README.md) | `/chute/` | Marble puzzle: flip levers so every marble lands in a cup of its colour |
 | [Timber](services/timber/README.md) | `/timber/` | Path puzzle: topple wooden blocks so they fall into a path between two flags |
 | [Runoff](services/runoff/README.md) | `/runoff/` | Water puzzle: shove soil so the spring waters every field and keeps every house dry |
 | [Poise](services/poise/README.md) | `/poise/` | Balance puzzle: swap weights on a hanging mobile until every bar hangs level |
@@ -71,6 +72,7 @@ node services/loom/scripts/check-generator.mjs
 node services/poise/scripts/check-generator.mjs
 node services/runoff/scripts/check-generator.mjs
 node services/timber/scripts/check-generator.mjs
+node services/chute/scripts/check-generator.mjs
 node services/web/scripts/check-track.mjs
 node services/web/scripts/check-daily.mjs
 node services/web/scripts/check-stats.mjs

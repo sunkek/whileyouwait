@@ -1,0 +1,301 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column; the board falls from hopper to cups, with the marbles in drop order above it.
+   Shared tokens and page chrome come from /shared/game.css. Clay is this game's third marble colour. */
+:root { --clay: #B5623F; --on-clay: #FFFFFF; --on-amber: #1A1611; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --clay: #D07E58; --on-clay: #1A1611; } }
+:root[data-theme="dark"] { --clay: #D07E58; --on-clay: #1A1611; }
+
+#queue { display: flex; justify-content: center; gap: 8px; }
+#queue button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; font: 600 12px var(--font-mono); cursor: pointer; transition: opacity 120ms var(--ease); }
+#queue button.later { opacity: 0.28; }
+#queue button.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg); }
+#queue button:focus-visible { outline: none; box-shadow: var(--ring); }
+.c0 { background: var(--accent); color: var(--on-amber); }
+.c1 { background: var(--brand); color: var(--on-brand); }
+.c2 { background: var(--clay); color: var(--on-clay); }
+
+/* The board: an SVG scaled to the column. Plates are the levers' tap targets. */
+#board { display: block; width: 100%; max-width: 500px; margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+#board .lane { stroke: var(--wire); stroke-width: 1.5; }
+#board .plate { fill: var(--empty); stroke: var(--line); cursor: pointer; }
+#board .bar { stroke: var(--ink); stroke-width: 6; stroke-linecap: round; transition: transform 180ms ease-out; pointer-events: none; }
+#board .pin { fill: var(--bg); stroke: var(--ink); stroke-width: 2; pointer-events: none; }
+#board .trail { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; pointer-events: none; }
+#board .cup { stroke-width: 2; }
+#board .hopper { fill: var(--empty); stroke: var(--wire); stroke-width: 1.5; }
+#board .m { cursor: pointer; }
+#board .m circle { stroke: var(--bg); stroke-width: 1; }
+#board .m text { font: 600 9.5px var(--font-mono); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.m0 circle { fill: var(--accent); } .m0 text { fill: var(--on-amber); }
+.m1 circle { fill: var(--brand); } .m1 text { fill: var(--on-brand); }
+.m2 circle { fill: var(--clay); } .m2 text { fill: var(--on-clay); }
+#note { min-height: 1.5em; }
+</style>
+
+<div class="wrap">
+  <a class="wyw-home" href="/">← WhileYouWait</a>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1>Chute</h1>
+    </div>
+    <div class="tabs" role="group" aria-label="Mode">
+      <button id="tab-daily" aria-pressed="true">Daily</button>
+      <button id="tab-practice" aria-pressed="false">Practice</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="s-stray">0</b><small>Stray</small></div>
+    <div class="stat"><b id="s-flips">0</b><small>Flips</small></div>
+    <div class="stat"><b id="s-par">0</b><small>Par</small></div>
+  </div>
+
+  <div id="queue" aria-label="Marbles in drop order"></div>
+  <svg id="board" viewBox="0 0 372 392" role="img" aria-label="Marble run with levers and cups"></svg>
+
+  <p class="note" id="note"></p>
+  <div class="controls">
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="reset">Reset</button>
+    <button class="btn" id="new" hidden>New board</button>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h2 id="r-title"></h2>
+    <textarea id="r-share" rows="3" readonly aria-label="Shareable result"></textarea>
+    <div class="controls">
+      <button class="btn primary" id="copy">Copy result</button>
+      <button class="btn" id="next" hidden>Next board</button>
+    </div>
+  </div>
+
+  <details class="rules" open>
+    <summary>How to play</summary>
+    <ul>
+      <li>Marbles drop one at a time, in number order. Every marble must land in a cup of its colour.</li>
+      <li>A marble rolls to the low end of any lever it meets, and the lever then tips the other way, so the next marble goes the other way.</li>
+      <li>Tap a lever to flip it before the run starts. Par is the fewest flips that sort every marble.</li>
+      <li>Tap a marble to follow it: you see its route, and the levers as that marble meets them. You can flip levers while following.</li>
+      <li>Tap the board during a pour to speed it up. Each tap makes it four times faster.</li>
+      <li>Undo takes a flip back, and the flip still counts.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+// ---------- rules ----------
+const LANES = 5, ROWS = 5, GATES = 7, MARBLES = 8, COLOURS = 3, ENTRY = 2;
+
+// Runs the marbles through the levers. Each lever sends a marble to its low side, then tips over.
+// `before` holds the levers as each marble found them.
+function drop(p, set) {
+  const st = set.slice(), lands = [], routes = [], before = [];
+  for (let m = 0; m < MARBLES; m++) {
+    before.push(st.slice());
+    let lane = ENTRY; const route = [];
+    for (let y = 0; y < ROWS; y++) {
+      const k = p.gates.findIndex(g => g.y === y && (lane === g.i || lane === g.i + 1));
+      if (k < 0) { route.push({ from: lane, to: lane }); continue; }
+      const to = p.gates[k].i + st[k];
+      route.push({ from: lane, to, gate: k, side: st[k] });
+      st[k] ^= 1; lane = to;
+    }
+    lands.push(lane); routes.push(route);
+  }
+  return { lands, routes, before };
+}
+const strays = (p, lands) => lands.filter((l, m) => p.cups[l] !== p.colours[m]).length;
+const bits = n => Array.from({ length: GATES }, (_, k) => n >> k & 1);
+const popcount = x => { let c = 0; while (x) { x &= x - 1; c++; } return c; };
+const touched = routes => new Set(routes.flat().map(s => s.gate).filter(k => k !== undefined)).size;
+
+// One try at a board: every lever in play at the start and in the solution, at most three solutions, and a start
+// three or four flips from the nearest of them.
+function candidate(R) {
+  const spots = [];
+  for (let y = 0; y < ROWS; y++) for (let i = y % 2; i + 1 < LANES; i += 2) spots.push({ y, i });
+  const gates = Daily.shuffle(R, spots).slice(0, GATES).sort((a, b) => a.y - b.y || a.i - b.i);
+  const cups = Daily.shuffle(R, Array.from({ length: LANES }, (_, i) => i % COLOURS));
+  const p = { gates, cups, colours: [] };
+  const sol = gates.map(() => R() < 0.5 ? 1 : 0);
+  const { lands, routes } = drop(p, sol);
+  if (touched(routes) < GATES) return null;
+  p.colours = lands.map(l => cups[l]);
+  if (new Set(lands).size < 4 || new Set(p.colours).size < COLOURS) return null;
+  const size = 1 << GATES, wrong = new Int8Array(size), sols = [];
+  for (let n = 0; n < size; n++) { wrong[n] = strays(p, drop(p, bits(n)).lands); if (!wrong[n]) sols.push(n); }
+  if (sols.length > 3) return null;
+  for (let t = 0; t < 60; t++) {
+    const start = Math.floor(R() * size), par = Math.min(...sols.map(s => popcount(s ^ start)));
+    if (par < 3 || par > 4 || wrong[start] < MARBLES / 2) continue;
+    if (touched(drop(p, bits(start)).routes) < GATES) continue;
+    return { ...p, start: bits(start), par };
+  }
+  return null;
+}
+function generate(seed) { const R = Daily.rng(seed); for (;;) { const p = candidate(R); if (p) return p; } }
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id), svgNS = 'http://www.w3.org/2000/svg';
+const board = $('board'), TINTS = ['accent', 'brand', 'clay'];
+const lx = i => 56 + i * 65, ry = r => 58 + r * 52, CUP_TOP = ry(ROWS) - 26, CUP_H = 92;
+const SWING = Math.atan(12 / 32.5) * 180 / Math.PI;
+const STAGGER = 420, ROW_MS = 150, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let mode = 'daily', game = null, trace = null, anim = null, speed = 1, bars = [], marbles = [], trail;
+
+function el(tag, attrs, parent = board) { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+function tilt(k, side) { bars[k].style.transform = `rotate(${side ? SWING : -SWING}deg)`; }
+function barY(g, x, side) { const low = side ? lx(g.i + 1) : lx(g.i), t = Math.abs(x - low) / 65; return ry(g.y) + 12 - 24 * t; }
+// Corner points of a marble's route through one row.
+function rowPoints(step, y) {
+  const g = step.gate === undefined ? null : game.gates[step.gate], a = lx(step.from), b = lx(step.to), top = ry(y) - 26, bot = ry(y) + 26;
+  if (!g) return [[a, top], [a, bot]];
+  return [[a, top], [a, barY(g, a, step.side) - 11], [b, barY(g, b, step.side) - 11], [b, bot]];
+}
+function along(pts, f) { const n = pts.length - 1, s = Math.min(n - 1e-6, f * n), i = Math.floor(s), t = s - i; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t]; }
+function slot(cup, n) { return [lx(cup) + (n % 2 ? 10.5 : -10.5), CUP_TOP + CUP_H - 13 - Math.floor(n / 2) * 20]; }
+function slots(lands, upto) { const count = Array(LANES).fill(0); return lands.slice(0, upto).map(l => slot(l, count[l]++)); }
+
+function buildBoard() {
+  board.textContent = ''; bars = []; marbles = [];
+  el('path', { class: 'hopper', d: `M${lx(ENTRY) - 24} 6 h48 l-16 22 h-16 z` });
+  for (let i = 0; i < LANES; i++) el('line', { class: 'lane', x1: lx(i), x2: lx(i), y1: i === ENTRY ? 28 : ry(0) - 26, y2: CUP_TOP });
+  game.cups.forEach((c, i) => {
+    const colour = `var(--${TINTS[c]})`;
+    el('rect', { class: 'cup', x: lx(i) - 27, y: CUP_TOP, width: 54, height: CUP_H, rx: 6, fill: colour, 'fill-opacity': 0.14, stroke: colour });
+  });
+  game.gates.forEach((g, k) => {
+    const cx = lx(g.i) + 32.5, cy = ry(g.y);
+    el('rect', { class: 'plate', x: cx - 40, y: cy - 20, width: 80, height: 40, rx: 6 }).addEventListener('click', () => flip(k));
+    const bar = el('line', { class: 'bar', x1: cx - 34.5, x2: cx + 34.5, y1: cy, y2: cy });
+    bar.style.transformOrigin = `${cx}px ${cy}px`;
+    bars.push(bar);
+    el('circle', { class: 'pin', cx, cy, r: 3.5 });
+  });
+  trail = el('polyline', { class: 'trail' });
+  game.colours.forEach((c, m) => {
+    const g = el('g', { class: `m m${c}` });
+    el('circle', { r: 9 }, g); el('text', {}, g).textContent = m + 1;
+    g.addEventListener('click', () => { if (!anim) follow(m); });
+    marbles.push(g);
+  });
+  $('queue').textContent = '';
+  game.colours.forEach((c, m) => {
+    const b = document.createElement('button');
+    b.className = `c${c}`; b.textContent = m + 1; b.setAttribute('aria-label', `Follow marble ${m + 1}`);
+    b.onclick = () => follow(m);
+    $('queue').appendChild(b);
+  });
+}
+function place(m, xy) { marbles[m].style.display = xy ? '' : 'none'; if (xy) marbles[m].setAttribute('transform', `translate(${xy[0]} ${xy[1]})`); }
+
+// `pouring` holds the result back until the last marble lands.
+function render(pouring = false) {
+  const r = drop(game, game.set), left = strays(game, r.lands), done = left === 0;
+  $('s-stray').textContent = left; $('s-flips').textContent = game.flips; $('s-par').textContent = game.par;
+  $('undo').disabled = !game.history.length || done; $('reset').disabled = !game.history.length || done;
+  const shown = trace === null ? MARBLES : trace + 1, spots = slots(r.lands, shown);
+  for (let m = 0; m < MARBLES; m++) place(m, m < shown ? spots[m] : null);
+  const levers = trace === null ? game.set : r.before[trace];
+  game.gates.forEach((g, k) => tilt(k, levers[k]));
+  [...$('queue').children].forEach((b, m) => { b.classList.toggle('on', m === trace); b.classList.toggle('later', trace !== null && m > trace); });
+  if (trace === null) trail.setAttribute('points', '');
+  else {
+    const pts = [[lx(ENTRY), 28]];
+    r.routes[trace].forEach((s, y) => pts.push(...rowPoints(s, y)));
+    pts.push(spots[trace]);
+    trail.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    trail.style.stroke = `var(--${TINTS[game.colours[trace]]})`;
+  }
+  $('note').textContent = pouring ? 'Tap the board to speed up the pour.' : done ? '' :
+    trace === null ? 'Tap a lever to flip it. Tap a marble to follow it.' : `Following marble ${trace + 1}. Tap it again to see them all.`;
+  $('result').hidden = pouring || !done;
+  if (done && !pouring) {
+    const d = game.flips - game.par;
+    $('r-title').textContent = d === 0 ? 'Sorted at par. Every flip counted.' : `Sorted, ${fmtScore(d)} over par.`;
+    $('r-share').value = shareText();
+    Stats.finish('chute', mode === 'daily', d);
+    $('next').hidden = mode !== 'practice';
+  }
+}
+
+function stopPour() { if (anim) cancelAnimationFrame(anim); anim = null; }
+function pour() {
+  stopPour();
+  trace = null;
+  if (calm) { render(); return; }
+  render(true);
+  const r = drop(game, game.set), rows = r.routes.map(rt => rt.map((s, y) => rowPoints(s, y))), spots = slots(r.lands, MARBLES);
+  const tips = [];
+  r.routes.forEach((rt, m) => rt.forEach((s, y) => { if (s.gate !== undefined) tips.push({ t: m * STAGGER + (y + 0.7) * ROW_MS, k: s.gate, side: s.side ^ 1 }); }));
+  tips.sort((a, b) => a.t - b.t);
+  for (let m = 0; m < MARBLES; m++) place(m, null);
+  let last = performance.now(), t = 0, next = 0;
+  speed = 1;
+  const frame = now => {
+    t += (now - last) * speed; last = now;
+    while (next < tips.length && tips[next].t <= t) { tilt(tips[next].k, tips[next].side); next++; }
+    let busy = false;
+    for (let m = 0; m < MARBLES; m++) {
+      const u = (t - m * STAGGER) / ROW_MS;
+      if (u < 0) { place(m, null); busy = true; }
+      else if (u >= ROWS + 1) place(m, spots[m]);
+      else if (u >= ROWS) { place(m, along([rows[m][ROWS - 1].at(-1), spots[m]], u - ROWS)); busy = true; }
+      else { const y = Math.floor(u); place(m, along(rows[m][y], u - y)); busy = true; }
+    }
+    if (busy) anim = requestAnimationFrame(frame); else { anim = null; render(); }
+  };
+  anim = requestAnimationFrame(frame);
+}
+function flip(k) {
+  if (!strays(game, drop(game, game.set).lands)) return;
+  stopPour();
+  game.history.push(game.set);
+  game.set = game.set.slice(); game.set[k] ^= 1; game.flips++;
+  save();
+  if (trace === null) pour(); else render();
+}
+function follow(m) { stopPour(); trace = trace === m ? null : m; render(); }
+board.addEventListener('click', e => { if (anim && !e.target.classList.contains('plate')) speed *= 4; });
+addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  follow(Math.max(0, Math.min(MARBLES - 1, (trace ?? -1) + (e.key === 'ArrowRight' ? 1 : -1))));
+});
+
+// ---------- modes, persistence, sharing ----------
+const LAUNCH = '2026-10-31', dailyNo = Daily.number(LAUNCH), store = Daily.store('chute1-'), { fmtScore } = Daily;
+const shareText = () => `${mode === 'daily' ? `Chute #${dailyNo}` : 'Chute practice'} · ${fmtScore(game.flips - game.par)}\n${Stats.bar(game.flips, game.par, '🟧')}\n${game.flips} flips · par ${game.par}\n${Stats.link('chute')}`;
+
+function save() {
+  if (mode !== 'daily') return;
+  store.save({ set: game.set, flips: game.flips, history: game.history });
+}
+function restore() {
+  const s = store.load();
+  if (!s || !s.set || s.set.length !== GATES) return false;
+  Object.assign(game, { set: s.set, flips: s.flips, history: s.history || [] });
+  return true;
+}
+function start(m) {
+  stopPour();
+  mode = m; trace = null;
+  $('tab-daily').setAttribute('aria-pressed', m === 'daily');
+  $('tab-practice').setAttribute('aria-pressed', m === 'practice');
+  $('new').hidden = m !== 'practice';
+  const p = generate(m === 'daily' ? `chute-daily-${Daily.dateKey}` : `chute-practice-${Math.random()}`);
+  game = { ...p, set: p.start, flips: 0, history: [] };
+  $('eyebrow').textContent = m === 'daily' ? `daily board #${dailyNo}` : 'practice board';
+  buildBoard();
+  if (m === 'daily' && restore()) render(); else pour();
+}
+$('tab-daily').onclick = () => start('daily');
+$('tab-practice').onclick = () => start('practice');
+$('new').onclick = () => start('practice');
+$('next').onclick = () => start('practice');
+$('undo').onclick = () => { const s = game.history.pop(); if (!s) return; stopPour(); game.set = s; save(); render(); };
+$('reset').onclick = () => { if (!game.history.length) return; stopPour(); game.history.push(game.set); game.set = game.start; save(); render(); };
+Daily.copyButton($('copy'), $('r-share'));
+start('daily');
+</script>
