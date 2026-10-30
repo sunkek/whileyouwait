@@ -3,9 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WhileYouWait: small daily games for any wait</title>
-<meta name="description" content="Small daily games for any wait: the build, the commute, the queue. No timers.">
-<meta property="og:title" content="WhileYouWait">
-<meta property="og:description" content="Small daily games for any wait: the build, the commute, the queue. No timers.">
+<meta name="description" content="Small daily puzzles for the build, the commute and the queue. A new one of each every day, free, with no sign-up and no timers.">
+<meta property="og:title" content="WhileYouWait: small daily games for any wait">
+<meta property="og:description" content="Small daily puzzles for the build, the commute and the queue. A new one of each every day, free, with no sign-up and no timers.">
 <link rel="canonical" href="https://whileyouwait.suncake.xyz/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WhileYouWait">
@@ -13,6 +13,7 @@
 <meta property="og:image" content="https://whileyouwait.suncake.xyz/og/catalog.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="WhileYouWait, a catalog of small daily games">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#FAF8F3">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -21,7 +22,7 @@
 <script src="/shared/offline.js" defer></script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"WhileYouWait","url":"https://whileyouwait.suncake.xyz/",
- "description":"Small daily games for any wait: the build, the commute, the queue. No timers."}
+ "description":"Small daily puzzles for the build, the commute and the queue. A new one of each every day, free, with no sign-up and no timers."}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -32,6 +33,7 @@
 :root {
   --bg: #FAF8F3; --tile: #FFFFFF; --empty: #F1ECE3; --line: #E4DCD0; --wire: #CFC6B7;
   --fg: #1A1611; --muted: #5A5346; --brand: #56744B; --accent-ink: #956C0A;
+  --amber: #E6AC0C; --plank: #CFA13C; --plank-end: #EAC463; --ink: #3A342B;
   --bad: #C0492F; --bad-bg: #F6E1DA; --ok-bg: #E3EBDD; --blue: #3F63A8; --dye: #2F4A7A; --weft: #E9DCC3;
   --ring: 0 0 0 3px rgba(86, 116, 75, 0.32);
   --shadow-sm: 0 1px 3px rgba(26, 22, 17, 0.06), 0 1px 2px rgba(26, 22, 17, 0.04);
@@ -42,12 +44,12 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --fg: #FAF8F3; --muted: #A79E8D; --amber: #E6AC0C; --plank: #A98328; --plank-end: #BD9635; --ink: #D8CFC0; --brand: #86A878; --accent-ink: #EBB528;
   --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6; --dye: #5B7DC4; --weft: #D9C9A8;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #1A1611; --tile: #29241D; --empty: #211D17; --line: #403A30; --wire: #5A5346;
-  --fg: #FAF8F3; --muted: #A79E8D; --brand: #86A878; --accent-ink: #EBB528;
+  --fg: #FAF8F3; --muted: #A79E8D; --amber: #E6AC0C; --plank: #A98328; --plank-end: #BD9635; --ink: #D8CFC0; --brand: #86A878; --accent-ink: #EBB528;
   --bad: #E06A4E; --bad-bg: #4A2A21; --ok-bg: #2E3A28; --blue: #6E8FD6; --dye: #5B7DC4; --weft: #D9C9A8;
   --ring: 0 0 0 3px rgba(134, 168, 120, 0.4); --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3); color-scheme: dark }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
@@ -109,6 +111,17 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 @keyframes po-tilt { 0%, 30% { transform: rotate(8deg); stroke: var(--fg); } 38% { transform: rotate(-3deg); stroke: var(--fg); } 46%, 86% { transform: rotate(0deg); stroke: var(--brand); } 96%, 100% { transform: rotate(8deg); stroke: var(--fg); } }
 @keyframes po-dl { 0%, 30% { transform: translateY(-5px); } 38% { transform: translateY(1.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-5px); } }
 @keyframes po-dr { 0%, 30% { transform: translateY(2.5px); } 38% { transform: translateY(-0.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(2.5px); } }
+/* Timber preview: blocks stand on a small board, topple in turn, and their planks join into a path from flag to flag. */
+.tb .cellg { fill: var(--empty); stroke: var(--line); stroke-width: 0.8; }
+.tb .flag { fill: none; stroke: var(--ink); stroke-width: 1.8; }
+.tb .sg { fill: var(--brand); }
+.tb .st { fill: var(--amber); animation: tb-stand 7s infinite; animation-delay: calc(var(--d) * 0.6s); }
+.tb .pl { transform-box: fill-box; transform-origin: left top; animation: tb-fall 7s infinite; animation-delay: calc(var(--d) * 0.6s); }
+.tb .pl.v { animation-name: tb-drop; }
+.tb .pl rect { fill: var(--plank); } .tb .pl .end { fill: var(--plank-end); }
+@keyframes tb-stand { 0%, 12% { opacity: 1; } 15%, 80% { opacity: 0; } 86%, 100% { opacity: 1; } }
+@keyframes tb-fall { 0%, 12% { opacity: 0; transform: scaleX(0.3); } 18%, 80% { opacity: 1; transform: scaleX(1); } 86%, 100% { opacity: 0; transform: scaleX(0.3); } }
+@keyframes tb-drop { 0%, 12% { opacity: 0; transform: scaleY(0.3); } 18%, 80% { opacity: 1; transform: scaleY(1); } 86%, 100% { opacity: 0; transform: scaleY(0.3); } }
 /* Runoff preview: a bank of soil blocks the stream to the field, so it runs to the house;
    the bank is shoved across and the water turns to the field. Resting frame: the solved one. */
 .ro { --rw: #3B82B0; }
@@ -129,7 +142,7 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 @keyframes ro-bank { 0%, 30% { transform: translate(32px, 0); } 42%, 90% { transform: translate(0, 0); } 98%, 100% { transform: translate(32px, 0); } }
 @keyframes ro-house { 0%, 40% { fill: var(--bad); } 46%, 92% { fill: var(--tile); } 98%, 100% { fill: var(--bad); } }
 @keyframes ro-crop { 0%, 50% { stroke: var(--accent-ink); } 56%, 90% { stroke: var(--brand); } 96%, 100% { stroke: var(--accent-ink); } }
-@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } .po .beam { stroke: var(--brand); } .ro .ra { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .preview * { animation: none !important; } .tb .st { opacity: 0; } .tb .pl { opacity: 1; transform: none; } .lm .mix { opacity: 0; } .fl rect { opacity: 1; } .hx .spin { transform: none; } .po .beam { stroke: var(--brand); } .ro .ra { opacity: 0; } }
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -150,6 +163,21 @@ footer a { color: inherit; }
   </header>
 
   <ul class="games">
+    <li><a class="game" href="/timber/" data-save="timber1-">
+      <div class="game-body">
+        <div class="game-top"><h2>Timber</h2><span class="tag">Blocks</span></div>
+        <p>Topple wooden blocks so they fall into a path between two flags. One push can bring down a whole line, wanted or not.</p>
+      </div>
+      <svg class="preview tb" viewBox="0 0 120 80" aria-hidden="true">
+        <rect class="cellg" x="10" y="10" width="20" height="20"/><rect class="cellg" x="30" y="10" width="20" height="20"/><rect class="cellg" x="50" y="10" width="20" height="20"/><rect class="cellg" x="70" y="10" width="20" height="20"/><rect class="cellg" x="90" y="10" width="20" height="20"/><rect class="cellg" x="10" y="30" width="20" height="20"/><rect class="cellg" x="30" y="30" width="20" height="20"/><rect class="cellg" x="50" y="30" width="20" height="20"/><rect class="cellg" x="70" y="30" width="20" height="20"/><rect class="cellg" x="90" y="30" width="20" height="20"/><rect class="cellg" x="10" y="50" width="20" height="20"/><rect class="cellg" x="30" y="50" width="20" height="20"/><rect class="cellg" x="50" y="50" width="20" height="20"/><rect class="cellg" x="70" y="50" width="20" height="20"/><rect class="cellg" x="90" y="50" width="20" height="20"/>
+        <rect class="sg" x="72" y="12" width="16" height="16" rx="2.5"/><rect class="sg" x="32" y="52" width="16" height="16" rx="2.5"/><rect class="sg" x="92" y="32" width="16" height="16" rx="2.5"/>
+        <g class="pl" style="--d:0"><rect x="12" y="12" width="56" height="16" rx="2.5"/><rect class="end" x="61" y="12" width="7" height="16" rx="2.5"/></g>
+        <g class="pl v" style="--d:1"><rect x="52" y="32" width="16" height="36" rx="2.5"/><rect class="end" x="52" y="61" width="16" height="7" rx="2.5"/></g>
+        <g class="pl" style="--d:2"><rect x="72" y="52" width="36" height="16" rx="2.5"/><rect class="end" x="101" y="52" width="7" height="16" rx="2.5"/></g>
+        <rect class="st" style="--d:0" x="12" y="12" width="16" height="16" rx="2.5"/><rect class="st" style="--d:1" x="52" y="32" width="16" height="16" rx="2.5"/><rect class="st" style="--d:2" x="72" y="52" width="16" height="16" rx="2.5"/>
+        <circle class="flag" cx="20" cy="20" r="4"/><circle class="flag" cx="100" cy="60" r="4"/>
+      </svg>
+    </a></li>
     <li><a class="game" href="/runoff/" data-save="runoff1-">
       <div class="game-body">
         <div class="game-top"><h2>Runoff</h2><span class="tag">Water</span></div>

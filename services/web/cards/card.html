@@ -1,27 +1,45 @@
 <!doctype html>
-<!-- Social card template, 1200x630. scripts/render-cards.sh screenshots it
-     once per page with ?eyebrow=&title=&text= and commits the PNGs. -->
+<!-- Social card template, 1200x630. scripts/render-cards.sh fills in the catalog's
+     preview art and styles, then screenshots it once per page with
+     ?eyebrow=&title=&text=&art= (a preview's class, or "all") and commits the PNGs.
+     The art sits in a shadow root so the catalog's styles can't touch the card. -->
 <html lang="en">
 <meta charset="utf-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=block">
 <style>
 html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
 body { background: #FAF8F3; color: #1A1611; font-family: "IBM Plex Sans", sans-serif;
-  display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding: 72px 84px; }
+  display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding: 60px 72px 52px; }
+.top { display: flex; justify-content: space-between; gap: 48px; align-items: center; }
+#art { flex: none; width: 420px; height: 344px; box-sizing: border-box; padding: 24px; background: #F1ECE3; border: 2px solid #E4DCD0; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .eyebrow { font: 500 24px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: 0.14em; color: #956C0A; }
-h1 { font-weight: 600; font-size: 96px; letter-spacing: -0.03em; line-height: 1; margin: 20px 0 28px; }
-p { font-size: 34px; line-height: 1.35; color: #5A5346; margin: 0; max-width: 960px; }
+h1 { font-weight: 600; font-size: 88px; letter-spacing: -0.03em; line-height: 1; margin: 20px 0 28px; }
+p { font-size: 30px; line-height: 1.35; color: #5A5346; margin: 0; }
 footer { display: flex; align-items: center; gap: 18px; font: 500 26px "IBM Plex Mono", monospace; color: #5A5346; border-top: 2px solid #E4DCD0; padding-top: 28px; }
 footer img { width: 52px; height: 52px; }
 footer b { color: #1A1611; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
 </style>
-<main>
-  <div class="eyebrow" id="eyebrow"></div>
-  <h1 id="title"></h1>
-  <p id="text"></p>
-</main>
+<div class="top">
+  <main>
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="title"></h1>
+    <p id="text"></p>
+  </main>
+  <div id="art"></div>
+</div>
+<template id="previews"><!-- previews --></template>
 <footer><img src="../public/favicon.svg" alt=""><b>WhileYouWait</b> · small games for any wait · no timers</footer>
 <script>
 const q = new URLSearchParams(location.search);
 for (const k of ['eyebrow', 'title', 'text']) document.getElementById(k).textContent = q.get(k) || '';
+const art = q.get('art'), all = art === 'all', root = document.getElementById('art').attachShadow({ mode: 'open' });
+root.appendChild(document.getElementById('previews').content.cloneNode(true));
+root.querySelectorAll('svg').forEach(s => { if (!all && !s.classList.contains(art)) s.remove(); });
+const box = document.createElement('div');
+box.append(...root.querySelectorAll('svg'));
+root.appendChild(box);
+const fit = document.createElement('style');
+fit.textContent = (all ? 'div { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: center; }' : 'div { width: 100%; }')
+  + ' .preview { width: 100%; height: auto; overflow: hidden; }';
+root.appendChild(fit);
 </script>
