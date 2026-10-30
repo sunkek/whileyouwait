@@ -5,7 +5,9 @@ hides exactly three order dependencies. Each is either "X pollutes Y" (Y fails
 if X ran earlier in the same run) or "X sets up Y" (Y fails unless X ran
 earlier). You compose runs, any tests in any order, read which tests pass and
 fail, and name all three dependencies. Nothing moves until you act, so there
-is no time pressure: the score is CI time, against a greedy bot.
+is no time pressure: the score is CI time, against a greedy bot. The bot tracks
+every hypothesis, which no person can match, so the catalog's stats page treats
+1.5 times its time as par.
 
 Live: <https://whileyouwait.suncake.xyz/flaky/>, part of the
 [WhileYouWait](../../README.md) catalog.

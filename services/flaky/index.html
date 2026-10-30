@@ -361,8 +361,9 @@ function showResult() {
   $('r-share').value = shareText();
   $('r-share').rows = Math.min(14, S.runs.length + 1);
   $('result').hidden = false;
-  // The bot's cost, Flaky's par, arrives a moment after the page loads; a wrong diagnosis earns no par credit.
-  if (BOT || !S.verdict) Stats.finish('flaky', mode === 'daily', S.verdict ? S.cost - BOT.cost : null);
+  // The bot arrives a moment after the page loads. It tracks every hypothesis, which no person can match, so par
+  // in the stats is 1.5 times its time. A wrong diagnosis earns no par credit.
+  if (BOT || !S.verdict) Stats.finish('flaky', mode === 'daily', S.verdict ? S.cost - Math.ceil(BOT.cost * 1.5) : null);
 }
 
 function save() {
