@@ -148,7 +148,7 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
-.game-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.game-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .game h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 .game p { margin: 6px 0 0; color: var(--muted); }
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
@@ -156,7 +156,7 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .games li { position: relative; }
 /* The star ends the title row, in the card's corner; the padding keeps the tag clear of it. */
 .game-top { padding-right: 30px; }
-.star { position: absolute; top: 9px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+.star { position: absolute; top: 13px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .star:hover { color: var(--accent-ink); }
 .star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
