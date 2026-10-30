@@ -8,6 +8,12 @@ Public URL: **https://whileyouwait.suncake.xyz** (proxied by Cloudflare through
 the `*.suncake.xyz` wildcard record). Traefik's `letsencrypt` resolver issues
 the origin certificate.
 
+Cloudflare overrides nginx's `no-cache` on CSS and JS with `max-age=14400`, so a
+browser may keep them for 4 hours. HTML is left alone. The image build therefore
+puts a content hash in every shared file's and `puzzles.js`'s URL, so a new page
+always asks for the matching file; don't remove that step. `config.js` has no
+hash, because nginx renders it at container start.
+
 Only `web` is on the `traefik` network. It serves the pages and proxies the
 Umami tracker (`/a/s.js`) and collect endpoint (`/a/api/send`) to `umami` over
 the project's own network. The Umami dashboard is not routed at all.

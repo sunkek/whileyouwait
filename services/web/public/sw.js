@@ -12,8 +12,16 @@ const PRECACHE = ['/', '/404.html', '/manifest.webmanifest', '/favicon.svg', '/i
 const PATIENCE = 3000;
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
+// Asset URLs carry a content hash from the image build. Each file keeps one cache entry under its plain
+// path, so entries don't pile up across deploys and an offline page gets the latest copy.
+const plain = u => u.split('?')[0];
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(PRECACHE.map(async u => {
+    const res = await fetch(u);
+    if (!res.ok) throw new Error(`precache failed: ${u}`);
+    await c.put(plain(u), res);
+  }))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -32,14 +40,14 @@ self.addEventListener('fetch', e => {
 });
 
 async function networkFirst(req, font) {
-  const cache = await caches.open(CACHE);
+  const cache = await caches.open(CACHE), key = font ? req : plain(req.url);
   const net = fetch(req).then(res => {
     // The font stylesheet loads without CORS, so its response is opaque; keep it anyway.
-    if (res.ok || (font && res.type === 'opaque')) cache.put(req, res.clone());
+    if (res.ok || (font && res.type === 'opaque')) cache.put(key, res.clone());
     return res;
   });
   net.catch(() => {});
   const first = await Promise.race([net.catch(() => null), new Promise(r => setTimeout(r, PATIENCE, null))]);
   if (first) return first;
-  return (await cache.match(req, { ignoreSearch: true })) || net;
+  return (await cache.match(key, { ignoreSearch: font })) || net;
 }
