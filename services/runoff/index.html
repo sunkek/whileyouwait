@@ -504,15 +504,26 @@ function cellAt(e) {
   const el = document.elementFromPoint(e.clientX, e.clientY), g = el && el.closest('#hill [data-i]');
   return g ? +g.dataset.i : null;
 }
+// With a square picked, a tap goes to the outlined neighbour under it, even one a taller square partly hides, and a
+// little past its edge. The rhombus is the top face, so 1 is its outline; the picked square competes so it stays tappable.
+const REACH = 1.35;
+function targetAt(e) {
+  if (sel === null) return null;
+  const { x, y } = new DOMPoint(e.clientX, e.clientY).matrixTransform($('hill').getScreenCTM().inverse());
+  const near = i => { const [cx, cy] = P(...centre(i), game.h[i]); return Math.abs(x - cx) / (TW / 2) + Math.abs(y - cy) / (TH / 2); };
+  const targets = allMoves(game, game.h).filter(([a]) => a === sel).map(([, b]) => b);
+  const best = targets.reduce((m, b) => m === null || near(b) < near(m) ? b : m, null);
+  return best !== null && near(best) <= REACH && near(best) < near(sel) ? best : null;
+}
 const isLocked = i => locked(game).has(i);
 $('hill').addEventListener('pointerdown', e => {
   if (!game || game.solved) return;
-  const i = cellAt(e); if (i === null) { sel = null; marks(); return; }
-  drag = { from: i, moved: false };
+  const i = cellAt(e), target = targetAt(e); if (i === null && target === null) { sel = null; marks(); return; }
+  drag = { from: i, target, moved: false };
   $('hill').setPointerCapture(e.pointerId);
 });
 $('hill').addEventListener('pointermove', e => {
-  if (!drag || drag.moved) return;
+  if (!drag || drag.moved || drag.target !== null) return;
   const i = cellAt(e);
   if (i === null || i === drag.from || !NB[drag.from].includes(i)) return;
   drag.moved = true;
@@ -524,7 +535,7 @@ $('hill').addEventListener('pointerup', e => {
   if (!drag) return;
   const d = drag; drag = null;
   if (d.moved || game.solved) return;
-  const i = cellAt(e); if (i !== d.from) return;
+  const i = d.target ?? cellAt(e); if (d.target === null && i !== d.from) return;
   if (sel !== null && NB[sel].includes(i)) {
     if (isLocked(i)) $('note').textContent = "Fields, houses and the spring stay put.";
     else if (!shove(sel, i)) $('note').textContent = 'That square is as high as it goes.';
