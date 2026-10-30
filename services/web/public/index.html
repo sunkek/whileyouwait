@@ -63,9 +63,10 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .lede { color: var(--muted); margin: 0; max-width: 46ch; }
 .games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
-.game { display: grid; grid-template-columns: 1fr 120px; gap: 16px; align-items: center; }
+.game { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; }
+.game .preview { grid-column: 1; grid-row: 1; }
 .preview { width: 120px; height: 80px; display: block; overflow: visible; }
-@media (max-width: 440px) { .game { grid-template-columns: 1fr 88px; gap: 12px; } .preview { width: 88px; height: 59px; } }
+@media (max-width: 440px) { .game { grid-template-columns: 88px 1fr; gap: 12px; } .preview { width: 88px; height: 59px; } }
 
 /* Card previews: one looping story per game, drawn in the site's tokens. */
 .preview .node { fill: var(--tile); stroke: var(--wire); stroke-width: 1.5; }
@@ -153,14 +154,13 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .tag.done { color: var(--brand); }
 .games li { position: relative; }
-/* The star sits at the end of the title row, beside the preview column, so it never covers the art. */
+/* The star ends the title row, in the card's corner; the padding keeps the tag clear of it. */
 .game-top { padding-right: 30px; }
-.star { position: absolute; top: 9px; right: 150px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+.star { position: absolute; top: 9px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .star:hover { color: var(--accent-ink); }
 .star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
 .star:focus-visible { outline: none; box-shadow: var(--ring); }
-@media (max-width: 440px) { .star { right: 114px; } }
 .your-stats { align-self: flex-start; font: 500 12px var(--font-mono); color: var(--muted); }
 .your-stats:hover { color: var(--fg); }
 footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
