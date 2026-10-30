@@ -45,11 +45,17 @@ The GHCR package is public, so no registry login is needed.
 
 ## Umami dashboard
 
+For a quick look, `make stats` prints a report: it opens its own tunnel, logs in
+with the password from `~/secrets/umami-pass.age`, and closes the tunnel when
+done. `scripts/stats.sh 7` limits it to the last 7 days.
+
+
 It listens on the host's loopback only (`127.0.0.1:3901`). Tunnel to it:
 
 ```bash
 ssh -N -L 3901:127.0.0.1:3901 sunn-agorabot
-# then open http://localhost:3901
+# then open http://localhost:3901, or http://[::1]:3901 while the dev stack
+# is up, because it holds 127.0.0.1:3901
 ```
 
 sshd on the host disables TCP forwarding globally; a `Match User deploy` block

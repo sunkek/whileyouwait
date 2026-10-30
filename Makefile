@@ -30,7 +30,7 @@ COMPOSE_WITH_PORTS = set -a; ENVIRONMENT=$(ENVIRONMENT); [ -f "$(PORTS_ENV)" ] &
 	secrets-init secrets-encrypt secrets-decrypt secrets-check secrets-add-recipient secrets-remove-recipient \
 	up down down-v restart restart-v \
 	run stop logs ps pull
-.PHONY: psql psql-admin pg-dump pg-restore
+.PHONY: psql psql-admin pg-dump pg-restore stats
 
 help:
 	@echo "Targets:"
@@ -55,6 +55,7 @@ help:
 	@echo "  make stop                     - Stop and remove containers"
 	@echo "  make logs                     - Follow compose logs"
 	@echo "  make ps                       - List compose containers"
+	@echo "  make stats                    - Print the production analytics report"
 	@echo "  make pull                     - Pull compose images"
 	@echo "  make psql                     - Open psql as APP_USER"
 	@echo "  make psql-admin               - Open psql as POSTGRES_USER"
@@ -221,6 +222,9 @@ run:
 
 stop:
 	$(COMPOSE_WITH_PORTS) --profile app down
+
+stats:
+	@scripts/stats.sh
 
 logs:
 	$(COMPOSE_WITH_PORTS) logs -f
