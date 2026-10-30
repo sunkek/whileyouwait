@@ -305,13 +305,15 @@ const SAVE_KEY = 'poise1-' + dateKey;
 
 function save() {
   if (mode !== 'daily') return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ w: game.w, swaps: game.swaps, solved: game.solved })); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ w: game.w, swaps: game.swaps, solved: game.solved, history: game.history })); } catch (e) {}
 }
 function restore() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     if (!s || !Array.isArray(s.w) || s.w.slice().sort((a, b) => a - b).join() !== game.values.join()) return;
     Object.assign(game, { w: s.w, swaps: s.swaps, solved: s.solved });
+    // Undo survives a reload; a history entry is a full arrangement of today's weights.
+    if (Array.isArray(s.history) && s.history.every(h => Array.isArray(h) && h.slice().sort((a, b) => a - b).join() === game.values.join())) game.history = s.history;
   } catch (e) {}
 }
 
