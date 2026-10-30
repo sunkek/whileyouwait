@@ -266,7 +266,7 @@ function buildTests() {
     const b = el('button', 'test');
     b.append(el('span', 'letter', LETTERS[t]), el('span', 'name', name), el('span', 'dur', P.dur[t] + 's'));
     b.title = 'test_' + name;
-    b.onclick = () => { const i = queue.indexOf(t); if (i >= 0) queue.splice(i, 1); else queue.push(t); render(); };
+    b.onclick = () => { const i = queue.indexOf(t); if (i >= 0) queue.splice(i, 1); else queue.push(t); save(); render(); };
     box.appendChild(b);
   });
 }
@@ -281,7 +281,7 @@ function buildDiag() {
     a.setAttribute('aria-label', `Dependency ${r + 1}: test`);
     v.setAttribute('aria-label', `Dependency ${r + 1}: kind`);
     b.setAttribute('aria-label', `Dependency ${r + 1}: affected test`);
-    [a, v, b].forEach(s => { s.onchange = () => { confirming = false; render(); }; box.appendChild(s); });
+    [a, v, b].forEach(s => { s.onchange = () => { confirming = false; save(); render(); }; box.appendChild(s); });
   }
 }
 
@@ -324,7 +324,7 @@ function render() {
     const chips = el('span', 'chips');
     r.run.forEach(t => chips.appendChild(chip(t, r.fail)));
     li.append(el('span', 'no', i ? '#' + i : 'CI'), chips, el('span', 'cost', i ? runCost(P.dur, r.run) + 's' : 'free'));
-    const load = () => { if (!done) { queue = r.run.slice(); render(); } };
+    const load = () => { if (!done) { queue = r.run.slice(); save(); render(); } };
     li.onclick = load;
     li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); load(); } };
     list.appendChild(li);
@@ -365,7 +365,9 @@ function showResult() {
 
 function save() {
   if (mode !== 'daily') return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ runs: S.runs.slice(1).map(r => r.run), diag: S.diag })); } catch (e) {}
+  // The queue and the half-filled diagnosis are saved too, so an interrupted visit resumes where it stopped.
+  const draft = [...$('diag').querySelectorAll('select')].map(x => x.value);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ runs: S.runs.slice(1).map(r => r.run), diag: S.diag, queue, draft })); } catch (e) {}
 }
 
 function submit(atoms) {
@@ -393,7 +395,11 @@ function start(m) {
           const sels = $('diag').querySelectorAll('select');
           saved.diag.forEach((a, r) => { const x = ATOMS[a]; sels[r * 3].value = src(x); sels[r * 3 + 1].value = typ(x); sels[r * 3 + 2].value = dst(x); });
           submit(saved.diag);
+        } else if (Array.isArray(saved.draft)) {
+          const sels = $('diag').querySelectorAll('select');
+          saved.draft.forEach((v, i) => { if (sels[i] && [...sels[i].options].some(o => o.value === v)) sels[i].value = v; });
         }
+        if (Array.isArray(saved.queue)) queue = saved.queue.filter((t, i, a) => FULL.includes(t) && a.indexOf(t) === i);
       }
     } catch (e) {}
   }
@@ -404,9 +410,9 @@ function start(m) {
 }
 
 $('run').onclick = () => { if (!queue.length) return; play(P, S, queue.slice()); save(); render(); };
-$('reverse').onclick = () => { queue.reverse(); render(); };
-$('all').onclick = () => { queue = queue.concat(FULL.filter(t => !queue.includes(t))); render(); };
-$('clear').onclick = () => { queue = []; render(); };
+$('reverse').onclick = () => { queue.reverse(); save(); render(); };
+$('all').onclick = () => { queue = queue.concat(FULL.filter(t => !queue.includes(t))); save(); render(); };
+$('clear').onclick = () => { queue = []; save(); render(); };
 $('submit').onclick = () => {
   const atoms = readDiag();
   if (!atoms) return;
