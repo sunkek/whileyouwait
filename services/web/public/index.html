@@ -61,12 +61,12 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--
 .eyebrow { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-ink); }
 h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6px; }
 .lede { color: var(--muted); margin: 0; max-width: 46ch; }
-.games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.games { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .game { display: block; text-decoration: none; color: inherit; background: var(--tile); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; transition: border-color 120ms var(--ease), transform 120ms var(--ease); }
-.game { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; }
-.game .preview { grid-column: 1; grid-row: 1; }
+.game { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px; padding: 12px; }
+.game .preview { grid-row: 1; width: 100%; height: auto; aspect-ratio: 3 / 2; }
+.game .game-body { grid-row: 2; }
 .preview { width: 120px; height: 80px; display: block; overflow: visible; }
-@media (max-width: 440px) { .game { grid-template-columns: 88px 1fr; gap: 12px; } .preview { width: 88px; height: 59px; } }
 
 /* Card previews: one looping story per game, drawn in the site's tokens. */
 .preview .node { fill: var(--tile); stroke: var(--wire); stroke-width: 1.5; }
@@ -113,6 +113,16 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 @keyframes po-tilt { 0%, 30% { transform: rotate(8deg); stroke: var(--fg); } 38% { transform: rotate(-3deg); stroke: var(--fg); } 46%, 86% { transform: rotate(0deg); stroke: var(--brand); } 96%, 100% { transform: rotate(8deg); stroke: var(--fg); } }
 @keyframes po-dl { 0%, 30% { transform: translateY(-5px); } 38% { transform: translateY(1.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(-5px); } }
 @keyframes po-dr { 0%, 30% { transform: translateY(2.5px); } 38% { transform: translateY(-0.9px); } 46%, 86% { transform: translateY(0); } 96%, 100% { transform: translateY(2.5px); } }
+/* Chute preview: four marbles drop in turn, and each tips the lever, so they land in alternate cups.
+   Resting frame: all four sorted. */
+.ch .lane { stroke: var(--wire); stroke-width: 1; }
+.ch .hop { fill: var(--empty); stroke: var(--wire); stroke-width: 0.8; }
+.ch .bar { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; transform-origin: 60px 32px; transform: rotate(-16deg); animation: ch-tip 8s infinite; }
+.ch .a { fill: var(--amber); } .ch .s { fill: var(--brand); }
+.ch .cup { fill-opacity: 0.16; stroke-width: 1.2; } .ch .cup.a { stroke: var(--amber); } .ch .cup.s { stroke: var(--brand); }
+.ch .mb { animation: ch-fall 8s infinite backwards; animation-delay: calc(var(--d) * 1.2s); }
+@keyframes ch-tip { 0%, 13% { transform: rotate(-16deg); } 15%, 28% { transform: rotate(16deg); } 30%, 43% { transform: rotate(-16deg); } 45%, 58% { transform: rotate(16deg); } 60%, 100% { transform: rotate(-16deg); } }
+@keyframes ch-fall { 0% { opacity: 0; transform: translate(var(--tx), -62px); } 2% { opacity: 1; transform: translate(var(--tx), -62px); } 9% { opacity: 1; transform: translate(var(--tx), -42px); } 14% { opacity: 1; transform: translate(var(--lx), -41px); } 22%, 68% { opacity: 1; transform: none; } 74%, 100% { opacity: 0; transform: none; } }
 /* Timber preview: blocks stand on a small board, topple in turn, and their planks join into a path from flag to flag. */
 .tb .cellg { fill: var(--empty); stroke: var(--line); stroke-width: 0.8; }
 .tb .flag { fill: none; stroke: var(--ink); stroke-width: 1.8; }
@@ -148,15 +158,14 @@ h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; margin: 2px 0 6
 .game:hover { border-color: var(--wire); }
 .game:active { transform: translateY(0.5px); }
 .game:focus-visible { outline: none; box-shadow: var(--ring); }
-.game-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.game h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
-.game p { margin: 6px 0 0; color: var(--muted); }
+.game-top { display: flex; flex-direction: column; gap: 0; }
+.game h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.game p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .tag { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .tag.done { color: var(--brand); }
-.games li { position: relative; }
-/* The star ends the title row, in the card's corner; the padding keeps the tag clear of it. */
-.game-top { padding-right: 30px; }
-.star { position: absolute; top: 13px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
+.games li { position: relative; display: grid; container-type: inline-size; }
+/* The star ends the title row, just under the art, whose height follows the card's width. */
+.star { position: absolute; top: calc(12px + (100cqw - 26px) * 2 / 3 + 2px); right: 4px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--wire); cursor: pointer; border-radius: var(--radius-md); }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .star:hover { color: var(--accent-ink); }
 .star[aria-pressed="true"] { color: var(--accent-ink); } .star[aria-pressed="true"] svg { fill: currentColor; }
@@ -177,6 +186,22 @@ footer a { color: inherit; }
   <a class="your-stats" href="/stats/">Your stats →</a>
 
   <ul class="games">
+    <li><a class="game" href="/chute/" data-save="chute1-">
+      <div class="game-body">
+        <div class="game-top"><h2>Chute</h2><span class="tag">Marbles</span></div>
+        <p>Flip levers so every marble lands in a cup of its colour. Each marble tips the levers it passes, so one flip reroutes the rest.</p>
+      </div>
+      <svg class="preview ch" viewBox="0 0 120 80" aria-hidden="true">
+        <path class="hop" d="M50 2 h20 l-6 8 h-8 z"/>
+        <line class="lane" x1="60" y1="10" x2="60" y2="30"/><line class="lane" x1="40" y1="36" x2="40" y2="50"/><line class="lane" x1="80" y1="36" x2="80" y2="50"/>
+        <rect class="cup a" x="24" y="50" width="32" height="27" rx="3"/><rect class="cup s" x="64" y="50" width="32" height="27" rx="3"/>
+        <line class="bar" x1="42" y1="32" x2="78" y2="32"/>
+        <circle class="mb a" style="--d:0;--tx:25px;--lx:5px" cx="35" cy="71" r="4"/>
+        <circle class="mb s" style="--d:1;--tx:-15px;--lx:5px" cx="75" cy="71" r="4"/>
+        <circle class="mb a" style="--d:2;--tx:15px;--lx:-5px" cx="45" cy="71" r="4"/>
+        <circle class="mb s" style="--d:3;--tx:-25px;--lx:-5px" cx="85" cy="71" r="4"/>
+      </svg>
+    </a></li>
     <li><a class="game" href="/timber/" data-save="timber1-">
       <div class="game-body">
         <div class="game-top"><h2>Timber</h2><span class="tag">Blocks</span></div>

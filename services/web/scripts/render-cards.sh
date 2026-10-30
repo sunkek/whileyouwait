@@ -38,6 +38,8 @@ card() { # card <name> <preview class> <eyebrow> <title> <text>
 
 card catalog all "Small daily games" "WhileYouWait" \
   "Small daily puzzles for the build, the commute and the queue. A new one of each every day, no sign-up, no timers."
+card chute ch "Daily marble puzzle" "Chute" \
+  "Flip levers so every marble lands in a cup of its colour. Each marble tips the levers it passes, so one flip reroutes the rest."
 card timber tb "Daily path puzzle" "Timber" \
   "Topple wooden blocks into a path between two flags. One push can bring down a whole line, so plan the fall."
 card runoff ro "Daily water puzzle" "Runoff" \
