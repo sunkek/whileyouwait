@@ -5,16 +5,30 @@
 # (see `make up`). Container and volume names are scoped by $ENVIRONMENT so
 # multiple environments don't collide; services reach each other by stable
 # network aliases, never by container name.
+# The project is named, and the service names carry the project's name,
+# because of other projects on this machine. Compose recognises its own
+# containers by project and service labels, not by container_name, and the
+# default project name is this directory's, "infra", which every
+# samsara-template fork shares: unnamed, `make run` in another fork replaced
+# this stack's Postgres container with its own. Compose also makes every
+# service name a DNS alias on the external dev network, which every fork
+# joins, so a bare "postgresql" there resolves to any fork's database.
+#
+# "umami" stays as an alias, on the project's private network only: the nginx
+# config shared with production proxies to http://umami:3000.
+name: whileyouwait-${ENVIRONMENT:-dev}
+
 networks:
   dev:
     external: true
+  internal: {}
 
 volumes:
   postgresql_data:
     name: whileyouwait_postgresql_data_${ENVIRONMENT:-dev}
 
 services:
-  postgresql:
+  whileyouwait-postgresql:
     image: postgres:18
     container_name: whileyouwait_postgresql_${ENVIRONMENT:-dev}
     restart: unless-stopped
@@ -25,9 +39,8 @@ services:
     env_file:
       - ../env/${ENVIRONMENT:-dev}/postgresql.env
     networks:
-      dev:
-        aliases:
-          - postgresql
+      - dev
+      - internal
     volumes:
       - postgresql_data:/var/lib/postgresql
       - ./postgresql/init/01-create-app-user-db.sh:/docker-entrypoint-initdb.d/01-create-app-user-db.sh:ro
@@ -46,7 +59,7 @@ services:
 
   # Umami keeps its own schema in APP_DB and migrates it on start. The
   # dashboard is never routed publicly; open it on the host-side port.
-  umami:
+  whileyouwait-umami:
     profiles: ["app"]
     image: ghcr.io/umami-software/umami:3.4.1
     container_name: whileyouwait_umami_${ENVIRONMENT:-dev}
@@ -55,14 +68,15 @@ services:
       - ../env/${ENVIRONMENT:-dev}/umami.env
     environment:
       # APP_* come from postgresql.env, which the Makefile sources before compose.
-      DATABASE_URL: postgresql://${APP_USER:?}:${APP_PASSWORD:?}@postgresql:5432/${APP_DB:?}
+      DATABASE_URL: postgresql://${APP_USER:?}:${APP_PASSWORD:?}@whileyouwait-postgresql:5432/${APP_DB:?}
       TRACKER_SCRIPT_NAME: s.js
       DISABLE_TELEMETRY: "1"
     depends_on:
-      postgresql:
+      whileyouwait-postgresql:
         condition: service_healthy
     networks:
       dev:
+      internal:
         aliases:
           - umami
     labels:
@@ -70,7 +84,7 @@ services:
 
   # Catalog and games, one nginx image. UMAMI_WEBSITE_ID is empty until a
   # website exists in Umami; set it in env/<env>/web.env.
-  web:
+  whileyouwait-web:
     profiles: ["app"]
     build:
       context: ../services
@@ -80,8 +94,7 @@ services:
     env_file:
       - ../env/${ENVIRONMENT:-dev}/web.env
     networks:
-      dev:
-        aliases:
-          - web
+      - dev
+      - internal
     labels:
       - traefik.enable=false

@@ -9,15 +9,23 @@ on the host; see [`deploy/README.md`](../deploy/README.md).
 dev override that publishes ports. `make up` merges them and brings up the
 `app` profile:
 
-- `postgresql`: Umami's database (`APP_DB`).
-- `umami`: analytics, dashboard on `127.0.0.1:$WHILEYOUWAIT_UMAMI_PORT`
+- `whileyouwait-postgresql`: Umami's database (`APP_DB`).
+- `whileyouwait-umami`: analytics, dashboard on `127.0.0.1:$WHILEYOUWAIT_UMAMI_PORT`
   (default 3901). It creates and migrates its schema on start.
-- `web`: the catalog and games on `127.0.0.1:$WHILEYOUWAIT_WEB_PORT`
+- `whileyouwait-web`: the catalog and games on `127.0.0.1:$WHILEYOUWAIT_WEB_PORT`
   (default 8080), built from `services/`. Pages are baked in, so edits need
   another `make up`.
 
-`make run` starts only `postgresql`. Container and volume names carry the
-`$ENVIRONMENT` suffix; services find each other through network aliases.
+`make run` starts only `whileyouwait-postgresql`. Container and volume names
+carry the `$ENVIRONMENT` suffix; services find each other by service name.
+
+The compose project is `whileyouwait-<env>` and every service name starts with
+`whileyouwait-`, because the `dev` network is shared with other projects on the
+machine: see the comment at the top of `docker-compose.yml`. `web` reaches
+Umami as `umami`, an alias on the stack's private `internal` network only.
+Containers made before the rename belong to the old project, `infra`; remove
+them once (`docker rm -f whileyouwait_postgresql_dev whileyouwait_umami_dev
+whileyouwait_web_dev`) and `make up` again. The volume keeps the data.
 
 ## Env files
 
