@@ -73,6 +73,15 @@ services:
       traefik.http.routers.whileyouwait.entrypoints: websecure
       traefik.http.routers.whileyouwait.tls.certresolver: letsencrypt
       traefik.http.services.whileyouwait.loadbalancer.server.port: "80"
+      # Security headers on every response, nginx error pages included. CSP here
+      # only covers framing/plugins/base; it does not restrict scripts.
+      traefik.http.routers.whileyouwait.middlewares: whileyouwait-headers
+      traefik.http.middlewares.whileyouwait-headers.headers.stsSeconds: "31536000"
+      traefik.http.middlewares.whileyouwait-headers.headers.contentTypeNosniff: "true"
+      traefik.http.middlewares.whileyouwait-headers.headers.frameDeny: "true"
+      traefik.http.middlewares.whileyouwait-headers.headers.referrerPolicy: strict-origin-when-cross-origin
+      traefik.http.middlewares.whileyouwait-headers.headers.permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+      traefik.http.middlewares.whileyouwait-headers.headers.contentSecurityPolicy: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
 
 volumes:
   postgres-data:
