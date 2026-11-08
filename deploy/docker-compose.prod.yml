@@ -15,6 +15,8 @@ services:
     image: postgres:18-alpine
     container_name: whileyouwait_postgres
     restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 256
     environment:
       POSTGRES_DB: umami
       POSTGRES_USER: umami
@@ -36,6 +38,8 @@ services:
     image: ghcr.io/umami-software/umami:3.4.1
     container_name: whileyouwait_umami
     restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 256
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,6 +59,8 @@ services:
     image: ghcr.io/sunkek/whileyouwait-web:${WEB_TAG:-latest}
     container_name: whileyouwait_web
     restart: unless-stopped
+    mem_limit: 64m
+    pids_limit: 128
     environment:
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
     networks:
