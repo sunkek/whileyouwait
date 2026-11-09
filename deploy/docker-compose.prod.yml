@@ -73,15 +73,21 @@ services:
       traefik.http.routers.whileyouwait.entrypoints: websecure
       traefik.http.routers.whileyouwait.tls.certresolver: letsencrypt
       traefik.http.services.whileyouwait.loadbalancer.server.port: "80"
-      # Security headers on every response, nginx error pages included. CSP here
-      # only covers framing/plugins/base; it does not restrict scripts.
+      # Security headers on every response, nginx error pages included.
+      # CSP: every resource from this origin, except Google Fonts. Inline
+      # scripts stay allowed: each game's rules live in its page's inline
+      # script, which the checks under services/<game>/scripts read, and the
+      # site has no accounts or tokens for an injection to steal. The policy
+      # still stops injected code from loading script from elsewhere, and from
+      # sending data off-site by fetch, beacon or image (not by navigating
+      # away). Checked page by page in headless Chrome.
       traefik.http.routers.whileyouwait.middlewares: whileyouwait-headers
       traefik.http.middlewares.whileyouwait-headers.headers.stsSeconds: "31536000"
       traefik.http.middlewares.whileyouwait-headers.headers.contentTypeNosniff: "true"
       traefik.http.middlewares.whileyouwait-headers.headers.frameDeny: "true"
       traefik.http.middlewares.whileyouwait-headers.headers.referrerPolicy: strict-origin-when-cross-origin
       traefik.http.middlewares.whileyouwait-headers.headers.permissionsPolicy: "camera=(), microphone=(), geolocation=()"
-      traefik.http.middlewares.whileyouwait-headers.headers.contentSecurityPolicy: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+      traefik.http.middlewares.whileyouwait-headers.headers.contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 volumes:
   postgres-data:
