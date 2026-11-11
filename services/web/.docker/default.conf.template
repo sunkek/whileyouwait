@@ -1,9 +1,18 @@
 # Rendered by the nginx image's envsubst step at container start, so
 # ${UMAMI_WEBSITE_ID} below is filled from the environment. Only variables that
 # exist in the environment are substituted; nginx's own $variables are left alone.
+# JSON access log, so the log pipeline (infra: Alloy -> Loki) parses fields
+# instead of a combined-format line.
+log_format json escape=json '{"time":"$time_iso8601","remote_addr":"$remote_addr",'
+    '"forwarded_for":"$http_x_forwarded_for","method":"$request_method",'
+    '"uri":"$request_uri","status":$status,"bytes":$body_bytes_sent,'
+    '"referer":"$http_referer","user_agent":"$http_user_agent",'
+    '"request_time":$request_time}';
+
 server {
     listen 80;
     server_name _;
+    access_log /var/log/nginx/access.log json;
     root /usr/share/nginx/html;
 
     # Redirects stay relative: behind Traefik nginx does not know the public host.
