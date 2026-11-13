@@ -1,12 +1,14 @@
-// Analytics: loads the Umami tracker from this origin and, on a game page,
+// Analytics: loads the Umami tracker from its own origin and, on a game page,
 // sends one "visit" event with how often and how recently this browser played
 // that game before. No cookie and no visitor ID: the history is read from the
 // game's own dated saves, which it already keeps to restore progress.
 //
 // Runs synchronously from the game's <head>, before the game's own script, so
 // the snapshot shows the saves as they were before this visit wrote today's.
-// window.WYW_SITE comes from /shared/config.js (rendered by nginx from
-// UMAMI_WEBSITE_ID); without it nothing is loaded or sent.
+// window.WYW_SITE and window.WYW_UMAMI come from /shared/config.js (rendered
+// by nginx from UMAMI_WEBSITE_ID and UMAMI_HOST); without both nothing is
+// loaded or sent. Umami is shared with the other projects (infra repo,
+// docs/UMAMI.md), so the tracker is cross-origin and the CSP names its host.
 (() => {
   const me = document.currentScript;
   const game = me.dataset.game;
@@ -37,11 +39,11 @@
     }
   }
 
-  const site = window.WYW_SITE;
-  if (!site) return;
+  const site = window.WYW_SITE, host = window.WYW_UMAMI;
+  if (!site || !host) return;
   const s = document.createElement('script');
   s.defer = true;
-  s.src = '/a/s.js';
+  s.src = host + '/s.js';
   s.dataset.websiteId = site;
   if (visit) s.onload = () => window.umami && window.umami.track('visit', visit);
   document.head.appendChild(s);

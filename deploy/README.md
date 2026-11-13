@@ -1,8 +1,11 @@
 # Deploy WhileYouWait
 
 Production runs as a docker compose stack on `sunn-agorabot`, behind that
-host's shared Traefik: Postgres, Umami and the `web` nginx image, defined in
-`deploy/docker-compose.prod.yml` and installed at `/opt/whileyouwait`.
+host's shared Traefik: the `web` nginx image alone, defined in
+`deploy/docker-compose.prod.yml` and installed at `/opt/whileyouwait`. It holds
+no state. Analytics go to the shared Umami at https://u-i.suncake.xyz, which the
+infra repository runs for every project (`docs/UMAMI.md` there); until
+November 2026 Postgres and Umami were part of this stack.
 
 Public URL: **https://whileyouwait.suncake.xyz** (proxied by Cloudflare through
 the `*.suncake.xyz` wildcard record). Traefik's `letsencrypt` resolver issues
@@ -14,9 +17,9 @@ puts a content hash in every shared file's and `puzzles.js`'s URL, so a new page
 always asks for the matching file; don't remove that step. `config.js` has no
 hash, because nginx renders it at container start.
 
-Only `web` is on the `traefik` network. It serves the pages and proxies the
-Umami tracker (`/a/s.js`) and collect endpoint (`/a/api/send`) to `umami` over
-the project's own network. The Umami dashboard is not routed at all.
+The pages load Umami's tracker from `u-i.suncake.xyz` and send events there,
+so the CSP in the compose file names that host in `script-src` and
+`connect-src`. `config.js` carries the website ID and the host.
 
 ## Layout on the host
 
@@ -31,42 +34,23 @@ the project's own network. The Umami dashboard is not routed at all.
 
 | Key | Notes |
 |---|---|
-| `POSTGRES_PASSWORD` | Baked into the volume on first boot, see below |
-| `UMAMI_APP_SECRET` | Signs dashboard sessions; rotating it logs you out, nothing else |
 | `UMAMI_WEBSITE_ID` | The Umami website the pages report to; empty means no tracker |
 | `WEB_TAG` | Image SHA; CI rewrites it on every deploy |
 
-> **The Postgres password, once set, stays set.** The image reads
-> `POSTGRES_PASSWORD` only when it initialises an empty volume. To rotate it,
-> `ALTER USER umami PASSWORD '…'` inside the running database and update
-> `.env` to match.
-
 The GHCR package is public, so no registry login is needed.
 
-## Umami dashboard
+## Analytics
 
-For a quick look, `make stats` prints a report: it opens its own tunnel, logs in
-with the password from `~/secrets/umami-pass.age`, and closes the tunnel when
-done. `scripts/stats.sh 7` limits it to the last 7 days.
-
-
-It listens on the host's loopback only (`127.0.0.1:3901`). Tunnel to it:
-
-```bash
-ssh -N -L 3901:127.0.0.1:3901 sunn-agorabot
-# then open http://localhost:3901, or http://[::1]:3901 while the dev stack
-# is up, because it holds 127.0.0.1:3901
-```
-
-sshd on the host disables TCP forwarding globally; a `Match User deploy` block
-at the end of `/etc/ssh/sshd_config` allows local forwarding to
-`127.0.0.1:3901` only. CI keys cannot use it: their `restrict` option turns
-forwarding off per key. Without that block the tunnel fails with
-"administratively prohibited".
+`make stats` prints a report from Umami's API: it logs in with the password
+from `~/secrets/umami-pass.age` and reads. `scripts/stats.sh 7` limits it to the
+last 7 days. The dashboard is https://u-i.suncake.xyz.
 
 The `visit` event carries `game`, `prior` and `gap` (see `CONTEXT.md`). Day-7
 returns for a game: Events → `visit`, filter `game`, and look at the share
 with `gap` ≥ 7 and `prior` > 0.
+
+To stop counting your own play, run `localStorage.setItem('umami.disabled', '1')`
+in the console on whileyouwait.suncake.xyz, once per browser.
 
 ## Deploy by hand
 
@@ -74,7 +58,7 @@ with `gap` ≥ 7 and `prior` > 0.
 ssh sunn-agorabot
 cd /opt/whileyouwait
 docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d --wait
+docker compose -f docker-compose.prod.yml up -d --wait --remove-orphans
 ```
 
 ## Continuous deploy
@@ -103,11 +87,6 @@ succession are refused for a minute. One deploy is one connection.
 
 ## Backups
 
-The only state is analytics, in the `whileyouwait_postgres-data` volume. Losing
-it loses history, not the site. To take a dump:
-
-```bash
-ssh sunn-agorabot 'docker exec whileyouwait_postgres pg_dump -U umami umami' > umami-$(date +%F).sql
-```
-
-Player progress is in players' browsers and never reaches the server.
+Nothing here to back up: player progress is in players' browsers and never
+reaches the server, and analytics are backed up with the shared Umami (infra
+repository, `docs/UMAMI.md`).

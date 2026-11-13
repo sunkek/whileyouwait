@@ -36,7 +36,10 @@ RUN set -e; cd /tmp/games; games="$(echo *)"; for g in $games; do \
       sed -i "s|'/$f'|'/$f?v=$v'|" sw.js; \
     done; \
     grep -q 'game.css?v=' poise/index.html; grep -q 'puzzles.js?v=' timber/index.html
-# Empty until the Umami website exists; without it the pages load no tracker.
+# Umami's website ID and origin (no trailing slash). Without both the pages
+# load no tracker. Both must exist here, even empty: envsubst leaves an unset
+# variable's ${...} in config.js as literal text.
 ENV UMAMI_WEBSITE_ID=""
+ENV UMAMI_HOST=""
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1/healthz || exit 1

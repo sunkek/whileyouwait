@@ -14,8 +14,8 @@
 # service name a DNS alias on the external dev network, which every fork
 # joins, so a bare "postgresql" there resolves to any fork's database.
 #
-# "umami" stays as an alias, on the project's private network only: the nginx
-# config shared with production proxies to http://umami:3000.
+# The browser loads the tracker from Umami's published port, as production
+# loads it from the shared Umami's hostname; web never talks to Umami itself.
 name: whileyouwait-${ENVIRONMENT:-dev}
 
 networks:
@@ -75,15 +75,14 @@ services:
       whileyouwait-postgresql:
         condition: service_healthy
     networks:
-      dev:
-      internal:
-        aliases:
-          - umami
+      - dev
+      - internal
     labels:
       - traefik.enable=false
 
   # Catalog and games, one nginx image. UMAMI_WEBSITE_ID is empty until a
-  # website exists in Umami; set it in env/<env>/web.env.
+  # website exists in Umami; set it in env/<env>/web.env. UMAMI_HOST comes
+  # from docker-compose.dev.yml, which publishes Umami's port.
   whileyouwait-web:
     profiles: ["app"]
     build:
@@ -95,6 +94,5 @@ services:
       - ../env/${ENVIRONMENT:-dev}/web.env
     networks:
       - dev
-      - internal
     labels:
       - traefik.enable=false

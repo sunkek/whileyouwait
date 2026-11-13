@@ -21,8 +21,10 @@ carry the `$ENVIRONMENT` suffix; services find each other by service name.
 
 The compose project is `whileyouwait-<env>` and every service name starts with
 `whileyouwait-`, because the `dev` network is shared with other projects on the
-machine: see the comment at the top of `docker-compose.yml`. `web` reaches
-Umami as `umami`, an alias on the stack's private `internal` network only.
+machine: see the comment at the top of `docker-compose.yml`. The browser loads
+the tracker from Umami's published port (`UMAMI_HOST`, set in
+`docker-compose.dev.yml`), as production loads it from the shared Umami's
+hostname; `web` itself never talks to Umami.
 Containers made before the rename belong to the old project, `infra`; remove
 them once (`docker rm -f whileyouwait_postgresql_dev whileyouwait_umami_dev
 whileyouwait_web_dev`) and `make up` again. The volume keeps the data.
@@ -42,8 +44,9 @@ Umami's `DATABASE_URL` is interpolated from the latter's `APP_*` values.
 | `web.env` | `UMAMI_WEBSITE_ID`; empty means no tracker |
 
 Add a variable with `make env-add` rather than by hand ([`docs/SECRETS.md`](../docs/SECRETS.md)).
-Production secrets are not in this repository at all: they live in
-`/opt/whileyouwait/.env` on the host.
+Production has no secrets of its own: `/opt/whileyouwait/.env` on the host
+holds the website ID and the image tag, and the shared Umami's secrets belong
+to the infra repository.
 
 ## Analytics locally
 

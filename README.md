@@ -42,12 +42,12 @@ supplied the design system, and decided how the site is hosted and measured.
   signal. It fetches from the network first, so a deploy shows up on the next
   load. The image build fills in its list of game files. The site also ships a
   web app manifest, so it can be installed to a phone's home screen.
-- **Analytics: self-hosted Umami, no cookies.** Its tracker and collect endpoint
-  are proxied under `/a/` on the same origin. On a game page,
+- **Analytics: self-hosted Umami, no cookies.** It is shared with the author's
+  other projects at `u-i.suncake.xyz`, whose tracker the pages load. On a game page,
   `services/web/public/shared/track.js` sends one `visit` event per day with
   how many earlier days this browser played that game (`prior`) and how long
   ago the last one was (`gap`). Both are read from the game's own dated saves,
-  so no visitor ID is stored or sent. The Umami dashboard is not public.
+  so no visitor ID is stored or sent. The dev stack runs its own Umami.
 
 ## Quick start
 

@@ -8,3 +8,6 @@ services:
   whileyouwait-web:
     ports:
       - "127.0.0.1:${WHILEYOUWAIT_WEB_PORT:-8080}:80"
+    environment:
+      # Where the browser loads the tracker from: Umami's published port.
+      UMAMI_HOST: http://localhost:${WHILEYOUWAIT_UMAMI_PORT:-3901}

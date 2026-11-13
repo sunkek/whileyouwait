@@ -1,4 +1,4 @@
-// The report behind `make stats`, from Umami's API. Run it through scripts/stats.sh, which supplies the tunnel and
+// The report behind `make stats`, from Umami's API. Run it through scripts/stats.sh, which supplies the address and
 // the password on stdin. Read-only. `node scripts/stats.mjs [days]` limits it to the last n days; the default is
 // everything since launch.
 import { readFileSync } from 'node:fs';

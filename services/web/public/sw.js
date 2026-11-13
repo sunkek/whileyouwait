@@ -2,7 +2,8 @@
 // shows up on the next load; the cached copy answers only when the network
 // fails or stalls, as on a metro or in a queue. Install caches the catalog and
 // every game, so a game opened for the first time without signal still loads.
-// Analytics (/a/) is never cached: offline visits simply go unrecorded.
+// Analytics is on another origin and never cached: offline visits simply go
+// unrecorded.
 const CACHE = 'wyw-1';
 // Every game's files, filled in by the Dockerfile when the image is built.
 const GAMES = [/* GAMES */];
@@ -35,7 +36,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const own = url.origin === location.origin;
-  if (own ? url.pathname.startsWith('/a/') : !FONT_HOSTS.includes(url.host)) return;
+  if (!own && !FONT_HOSTS.includes(url.host)) return;
   e.respondWith(networkFirst(req, !own));
 });
 

@@ -1,5 +1,5 @@
 # Rendered by the nginx image's envsubst step at container start, so
-# ${UMAMI_WEBSITE_ID} below is filled from the environment. Only variables that
+# ${UMAMI_WEBSITE_ID} and ${UMAMI_HOST} below are filled from the environment. Only variables that
 # exist in the environment are substituted; nginx's own $variables are left alone.
 # JSON access log, so the log pipeline (infra: Alloy -> Loki) parses fields
 # instead of a combined-format line.
@@ -29,24 +29,7 @@ server {
     location = /shared/config.js {
         default_type application/javascript;
         add_header Cache-Control "no-cache";
-        return 200 'window.WYW_SITE = "${UMAMI_WEBSITE_ID}";\n';
-    }
-
-    # Umami, proxied so the tracker is a first-party script on this origin.
-    # A variable in proxy_pass makes nginx resolve `umami` per request through
-    # Docker's DNS, so nginx starts without Umami and survives its restarts;
-    # analytics then fail on their own and the games keep working.
-    resolver 127.0.0.11 valid=30s ipv6=off;
-    set $umami http://umami:3000;
-
-    location = /a/s.js {
-        proxy_pass $umami/s.js;
-        proxy_set_header Host $host;
-    }
-
-    location = /a/api/send {
-        proxy_pass $umami/api/send;
-        proxy_set_header Host $host;
+        return 200 'window.WYW_SITE = "${UMAMI_WEBSITE_ID}";\nwindow.WYW_UMAMI = "${UMAMI_HOST}";\n';
     }
 
     error_page 404 /404.html;
